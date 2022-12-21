@@ -1,7 +1,6 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -125,9 +124,4 @@ func (c *core) sendCommitVote() {
 	}
 	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
-
-	if !c.IsProposer() {
-		c.setCurrentState(StateCommitted)
-		c.startNewRound(common.Big0)
-	}
 }
