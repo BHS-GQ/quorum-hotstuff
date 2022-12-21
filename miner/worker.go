@@ -308,7 +308,7 @@ func (w *worker) pendingBlock() *types.Block {
 func (w *worker) start() {
 	atomic.StoreInt32(&w.running, 1)
 	if hotstuff, ok := w.engine.(consensus.HotStuff); ok {
-		hotstuff.Start(w.chain, w.chain.CurrentBlock, nil) // [TODO] Try enabling badblock
+		hotstuff.Start(w.chain, w.chain.CurrentBlock, rawdb.HasBadBlock)
 	} else if istanbul, ok := w.engine.(consensus.Istanbul); ok {
 		istanbul.Start(w.chain, w.chain.CurrentBlock, rawdb.HasBadBlock)
 	} else {
