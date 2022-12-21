@@ -19,9 +19,17 @@ const (
 	Istanbul99 = 99
 	// this istanbul subprotocol will be registered in addition to "eth"
 	Istanbul100 = 100
+
+	Hotstuff67 = 67
 )
 
 var (
+	HotstuffProtocol = Protocol{
+		Name:     "hotstuff",
+		Versions: []uint{Hotstuff67},
+		Lengths:  map[uint]uint64{Hotstuff67: 18},
+	}
+
 	IstanbulProtocol = Protocol{
 		Name:     "istanbul",
 		Versions: []uint{Istanbul100, Istanbul99, Istanbul64},
@@ -66,6 +74,11 @@ type Broadcaster interface {
 	Enqueue(id string, block *types.Block)
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
+
+	// HotStuff - For unicast
+	// FindPeer find peer by address
+	FindPeer(target common.Address) Peer
+	// /HotStuff
 }
 
 // Peer defines the interface to communicate with peer

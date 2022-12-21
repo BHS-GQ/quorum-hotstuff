@@ -172,6 +172,12 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		}
 	}
 
+	// HotStuff
+	if chainConfig.HotStuff != nil && (chainConfig.IBFT != nil || chainConfig.QBFT != nil) {
+		return nil, errors.New("the attributes config.HotStuff are mutually exclusive with Istanbul-based BFT")
+	}
+	// /HotStuff
+
 	if !rawdb.GetIsQuorumEIP155Activated(chainDb) && chainConfig.ChainID != nil {
 		//Upon starting the node, write the flag to disallow changing ChainID/EIP155 block after HF
 		rawdb.WriteQuorumEIP155Activation(chainDb)

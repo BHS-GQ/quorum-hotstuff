@@ -80,6 +80,10 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 		stopCh:  make(chan struct{}),
 		worker:  newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true),
 	}
+	// HotStuff - Enable pre-sealing
+	// [TODO] Check if this is necessary
+	miner.EnablePreseal()
+	// /HotStuff
 	go miner.update()
 
 	return miner

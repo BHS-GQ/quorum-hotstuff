@@ -30,9 +30,13 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hotstuffBackend "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/backend"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -226,6 +230,9 @@ type Config struct {
 	// QuorumLight
 	QuorumLightServer bool               `toml:",omitempty"`
 	QuorumLightClient *QuorumLightClient `toml:",omitempty"`
+
+	// HotStuff
+	HotStuff hotstuff.Config
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
@@ -235,6 +242,24 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		chainConfig.Clique.AllowedFutureBlockTime = config.Miner.AllowedFutureBlockTime //Quorum
 		return clique.New(chainConfig.Clique, db)
 	}
+	// HotStuff
+	if chainConfig.HotStuff != nil {
+		config := hotstuff.DefaultBasicConfig
+		nodeKey := stack.Config().NodeKey()
+		genesisNodeList := stack.Config().StaticNodes()
+
+		// Generate validators set from static-nodes.json
+		validators := make([]common.Address, 0)
+		for _, v := range genesisNodeList {
+			pubkey := v.Pubkey()
+			validators = append(validators, crypto.PubkeyToAddress(*pubkey))
+		}
+		valset := validator.NewSet(validators, hotstuff.RoundRobin)
+
+		return hotstuffBackend.New(config, nodeKey, db, valset)
+	}
+	// /HotStuff
+
 	if len(chainConfig.Transitions) > 0 {
 		config.Istanbul.Transitions = chainConfig.Transitions
 	}

@@ -78,7 +78,7 @@ func makeHeader(parent *types.Block, config *hotstuff.Config) *types.Header {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     parent.Number().Add(parent.Number(), common.Big1),
-		GasLimit:   core.CalcGasLimit(parent, parent.GasLimit(), parent.GasLimit()),
+		GasLimit:   core.CalcGasLimit(parent, 0, parent.GasLimit(), parent.GasLimit()), // Quorum - Set min gas to 0?
 		GasUsed:    0,
 		Extra:      parent.Extra(),
 		Time:       parent.Time() + config.BlockPeriod,
@@ -108,7 +108,7 @@ func makeBlock(t *testing.T, chain *core.BlockChain, engine *backend, parent *ty
 func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
-	state, _ := chain.StateAt(parent.Root())
+	state, _, _ := chain.StateAt(parent.Root())
 	block, _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
 	return block
 }
@@ -132,7 +132,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 		TrieDirtyLimit: 256,
 		TrieTimeLimit:  5 * time.Minute,
 	}
-	blockchain, err := core.NewBlockChain(memDB, cacheConfig, genesis.Config, b, vm.Config{}, nil, &txLookUpLimit)
+	blockchain, err := core.NewBlockChain(memDB, cacheConfig, genesis.Config, b, vm.Config{}, nil, &txLookUpLimit, nil)
 	if err != nil {
 		panic(err)
 	}

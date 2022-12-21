@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -96,14 +97,14 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 }
 
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
-	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
+	// No block rewards in HotStuff, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 }
 
 func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	/// No block rewards in Istanbul, so the state remains as is and uncles are dropped
+	/// No block rewards in HotStuff, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 
@@ -143,7 +144,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 			s.proposedBlockHash = common.Hash{}
 			s.sealMu.Unlock()
 		}()
-		// post block into Istanbul engine
+		// post block into HotStuff engine
 		go s.EventMux().Post(hotstuff.RequestEvent{
 			Proposal: block,
 		})
@@ -176,15 +177,15 @@ func (s *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64,
 
 func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
-		Namespace: "istanbul",
+		Namespace: "HotStuff",
 		Version:   "1.0",
 		Service:   &API{chain: chain, hotstuff: s},
 		Public:    true,
 	}}
 }
 
-// Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+// Start implements consensus.HotStuff.Start
+func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if s.coreStarted {
@@ -210,7 +211,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	return nil
 }
 
-// Stop implements consensus.Istanbul.Stop
+// Stop implements consensus.HotStuff.Stop
 func (s *backend) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
@@ -241,7 +242,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if header.MixDigest != types.HotstuffDigest {
 		return errInvalidMixDigest
 	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
+	// Ensure that the block doesn't contain any uncles which are meaningless in HotStuff
 	if header.UncleHash != nilUncleHash {
 		return errInvalidUncleHash
 	}

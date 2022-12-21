@@ -27,7 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru"
 )
 
 const (
@@ -43,6 +43,15 @@ func (s *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 
 	return data, hotstuff.RLPHash(data), nil
 }
+
+// HotStuff
+// For Quorum consensus framework
+// Protocol implements consensus.Engine.Protocol
+func (sb *backend) Protocol() consensus.Protocol {
+	return consensus.HotstuffProtocol
+}
+
+// /HotStuff
 
 // HandleMsg implements consensus.Handler.HandleMsg
 func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {

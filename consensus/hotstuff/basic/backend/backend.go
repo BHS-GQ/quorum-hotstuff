@@ -51,7 +51,7 @@ type backend struct {
 	signer       hotstuff.Signer
 	chain        consensus.ChainReader
 	currentBlock func() *types.Block
-	hasBadBlock  func(hash common.Hash) bool
+	hasBadBlock  func(db ethdb.Reader, hash common.Hash) bool
 	logger       log.Logger
 
 	valset         hotstuff.ValidatorSet
@@ -366,5 +366,5 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 	if s.hasBadBlock == nil {
 		return false
 	}
-	return s.hasBadBlock(hash)
+	return s.hasBadBlock(s.db, hash)
 }

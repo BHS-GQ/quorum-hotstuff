@@ -705,6 +705,24 @@ func (h *handler) FindPeers(targets map[common.Address]bool) map[common.Address]
 	return m
 }
 
+// HotStuff
+func (h *handler) FindPeer(target common.Address) consensus.Peer {
+	// Locks not implemented in Zion
+	h.peers.lock.RLock()
+	defer h.peers.lock.RUnlock()
+
+	for _, p := range h.peers.peers {
+		pubKey := p.Node().Pubkey()
+		addr := crypto.PubkeyToAddress(*pubKey)
+		if addr == target {
+			return p
+		}
+	}
+	return nil
+}
+
+// /HotStuff
+
 // makeQuorumConsensusProtocol is similar to eth/handler.go -> makeProtocol. Called from eth/handler.go -> Protocols.
 // returns the supported subprotocol to the p2p server.
 // The Run method starts the protocol and is called by the p2p server. The quorum consensus subprotocol,

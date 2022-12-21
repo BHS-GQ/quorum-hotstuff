@@ -153,3 +153,16 @@ type Istanbul interface {
 	// Stop stops the engine
 	Stop() error
 }
+
+// HotStuff is a consensus engine to implement the scalable hotstuff consensus
+type HotStuff interface {
+	Engine
+
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
+}
+
+// /Hotstuff
