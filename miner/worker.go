@@ -410,7 +410,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 		case head := <-w.chainHeadCh:
 			if h, ok := w.engine.(consensus.Handler); ok {
-				h.NewChainHead()
+				h.NewChainHead(head.Block.Header())
 			}
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()

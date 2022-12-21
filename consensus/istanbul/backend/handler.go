@@ -137,7 +137,7 @@ func (sb *Backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
 }
 
-func (sb *Backend) NewChainHead() error {
+func (sb *Backend) NewChainHead(header *types.Header) error {
 	sb.coreMu.RLock()
 	defer sb.coreMu.RUnlock()
 	if !sb.coreStarted {

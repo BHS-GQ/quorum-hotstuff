@@ -203,7 +203,7 @@ func TestQBFTTransitionDeadlock(t *testing.T) {
 			t.Errorf("Error inserting block: %v", err)
 		}
 
-		if err = engine.NewChainHead(); err != nil {
+		if err = engine.NewChainHead(nil); err != nil { // HotStuff - null input to NewChainHead for compatability
 			t.Errorf("Error posting NewChainHead Event: %v", err)
 		}
 
