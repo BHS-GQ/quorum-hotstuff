@@ -158,7 +158,7 @@ func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 
 			m.Add(hash, true)
 			s.recentMessages.Add(addr, m)
-			go p.Send(hotstuffMsg, payload)
+			go p.SendConsensus(hotstuffMsg, payload)
 		}
 	}
 	return nil
@@ -194,7 +194,7 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 			m.Add(hash, true)
 			s.recentMessages.Add(target, m)
 			go func() {
-				if err := p.Send(hotstuffMsg, payload); err != nil {
+				if err := p.SendConsensus(hotstuffMsg, payload); err != nil {
 					s.logger.Error("unicast message failed", "err", err)
 				}
 			}()

@@ -572,5 +572,5 @@ func (p *Peer) AddConsensusProtoRW(rw p2p.MsgReadWriter) *Peer {
 }
 
 func (p *Peer) Send(msgcode uint64, data interface{}) error {
-	return p2p.Send(p.rw, msgcode, data) // [TODO] Try SendConsensus instead
+	panic("implement me")
 }
