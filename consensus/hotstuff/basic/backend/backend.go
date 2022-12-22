@@ -36,6 +36,9 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
+	"go.dedis.ch/kyber/v3"
+	"go.dedis.ch/kyber/v3/sign/bdn"
+	"go.dedis.ch/kyber/v3/util/random"
 )
 
 const (
@@ -74,6 +77,11 @@ type backend struct {
 	eventMux *event.TypeMux
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
+
+	// BLS Upgrade - aggregated signature
+	aggregatedPub kyber.Point
+	aggregatedPrv kyber.Scalar
+	// /BLS Upgrade
 }
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
@@ -97,6 +105,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		proposals:      make(map[common.Address]bool),
 	}
 
+	backend.aggregatedPrv, backend.aggregatedPub = bdn.NewKeyPair(config.Suite, random.New())
 	backend.core = hsc.New(backend, config, signer, valset)
 	return backend
 }

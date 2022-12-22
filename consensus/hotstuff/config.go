@@ -16,6 +16,8 @@
 
 package hotstuff
 
+import "go.dedis.ch/kyber/v3/pairing/bn256"
+
 type SelectProposerPolicy uint64
 
 const (
@@ -30,6 +32,7 @@ type Config struct {
 	LeaderPolicy   SelectProposerPolicy `toml:",omitempty"` // The policy for speaker selection
 	Test           bool                 `toml:",omitempty"`
 	Epoch          uint64               `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
+	Suite          *bn256.Suite         `json:"suite"`      // A new suite generated for key distribution
 }
 
 // todo: modify request timeout, and miner recommit default value is 3s. recommit time should be > blockPeriod
@@ -38,6 +41,7 @@ var DefaultBasicConfig = &Config{
 	BlockPeriod:    1,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
+	Suite:          bn256.NewSuite(),
 	Test:           false,
 }
 
@@ -46,5 +50,6 @@ var DefaultEventDrivenConfig = &Config{
 	BlockPeriod:    2000,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          0,
+	Suite:          bn256.NewSuite(),
 	Test:           false,
 }
