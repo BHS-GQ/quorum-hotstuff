@@ -123,17 +123,36 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	var err error
 
 	// Add sender address
+	// msg only has Code and Msg
 	msg.Address = c.Address()
 	msg.View = c.currentView()
+	msg.AggPub = []byte{}
+	msg.AggSign = []byte{}
 
 	// Add proof of consensus
 	proposal := c.current.Proposal()
-	if msg.Code == MsgTypePrepareVote && proposal != nil {
-		seal, err := c.signer.SignVote(proposal)
-		if err != nil {
-			return nil, err
+	if proposal != nil {
+		switch msg.Code {
+		case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
+			// Sign
+			encodedData, err := msg.PayloadNoAddrNoAggNoSig()
+			if err != nil {
+				return nil, err
+			}
+
+			// msg.AggSign is partially-signed
+			msg.AggPub, msg.AggSign, err = c.signer.AggregatedSignedFromSingle(encodedData)
+			if err != nil {
+				return nil, err
+			}
+
+		case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
+			// Add Threshold Signature as proof
+			// MsgTypePreCommit re-signing is redundant; find way to get from block
+
+		default:
+			c.logger.Error("invalid msg type", "msg", msg)
 		}
-		msg.CommittedSeal = seal
 	}
 
 	// Sign Message
@@ -153,16 +172,6 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	}
 
 	return payload, nil
-}
-
-func (c *core) getMessageSeals(n int) [][]byte {
-	seals := make([][]byte, n)
-	for i, data := range c.current.PrepareVotes() {
-		if i < n {
-			seals[i] = data.CommittedSeal
-		}
-	}
-	return seals
 }
 
 func (c *core) broadcast(msg *hotstuff.Message) {

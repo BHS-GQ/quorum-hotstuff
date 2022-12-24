@@ -45,7 +45,7 @@ type Backend interface {
 	Unicast(valSet ValidatorSet, payload []byte) error
 
 	// PreCommit write seal to header and assemble new qc
-	PreCommit(proposal Proposal, seals [][]byte) (Proposal, error)
+	PreCommit(proposal Proposal, valSet ValidatorSet, collectionPub, collectionSig map[common.Address][]byte) (Proposal, error)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.

@@ -238,6 +238,7 @@ func (m *Message) Payload() ([]byte, error) {
 func (m *Message) PayloadNoAddrNoAggNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&Message{
 		Code:      m.Code,
+		View:      m.View,
 		Msg:       m.Msg,
 		Address:   common.Address{},
 		Signature: []byte{},
@@ -253,6 +254,8 @@ func (m *Message) PayloadNoSig() ([]byte, error) {
 		Msg:       m.Msg,
 		Address:   m.Address,
 		Signature: []byte{},
+		AggPub:    m.AggPub,
+		AggSign:   m.AggSign,
 	})
 }
 

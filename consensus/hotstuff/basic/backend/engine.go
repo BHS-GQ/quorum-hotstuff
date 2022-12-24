@@ -167,7 +167,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 }
 
 func (s *backend) SealHash(header *types.Header) common.Hash {
-	return s.signer.SigHash(header)
+	return s.signer.SealHash(header)
 }
 
 // useless
@@ -275,7 +275,12 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap := s.snap().Copy()
-	return s.signer.VerifyHeader(header, snap, seal)
+	// [TODO] Verify validators in extraData. Validators in snapshot and extraData should be the same.
+
+	// Resolve auth key and check against signers
+	if _, err := s.signer.Recover(header); err != nil {
+		return err
+	}
+
+	return nil
 }

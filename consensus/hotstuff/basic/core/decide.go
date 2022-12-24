@@ -57,12 +57,30 @@ func (c *core) sendDecide() {
 
 	msgTyp := MsgTypeDecide
 	sub := c.current.CommittedQC()
+
+	collectionPub := make(map[common.Address][]byte)
+	collectionSig := make(map[common.Address][]byte)
+	for _, msg := range c.current.commitVotes.Values() {
+		// Notes: msg.AggPub and msg.AggSign are assigned by calling core.go/finalizeMessage at the delegators' sides
+		collectionPub[msg.Address], collectionSig[msg.Address] = msg.AggPub, msg.AggSign
+	}
+	// Use mask aggsign and aggpub fields for aggsig and aggkey
+	_, aggSig, aggKey, err := c.signer.AggregateSignature(c.valSet, collectionPub, collectionSig)
+	if err != nil {
+		logger.Error("Failed to aggregate", "msg", msgTyp, "err", err)
+	}
+
 	payload, err := Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(&hotstuff.Message{
+		Code:    msgTyp,
+		Msg:     payload,
+		AggSign: aggSig,
+		AggPub:  aggKey,
+	})
 	logger.Trace("sendDecide", "msg view", sub.View, "proposal", sub.Hash)
 }
 
@@ -89,7 +107,7 @@ func (c *core) handleDecide(data *hotstuff.Message, src hotstuff.Validator) erro
 		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(data, c.expectedMsg, msg, c.valSet); err != nil {
 		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
 		return err
 	}

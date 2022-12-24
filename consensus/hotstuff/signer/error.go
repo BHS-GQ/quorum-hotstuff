@@ -36,8 +36,8 @@ var (
 	// errEmptyAggregatedSign is returned if the field of aggregated signature is zero.
 	errEmptyAggregatedSig = errors.New("zero aggregated signature")
 
-	// errInvalidProposal is returned when a prposal is malformed.
-	errInvalidProposal = errors.New("invalid propsal, comes from myself")
+	// errInvalidProposalMyself is returned when a prposal is malformed.
+	errInvalidProposalMyself = errors.New("invalid propsal, comes from myself")
 
 	// errTestIncorrectConversion is returned if the any conversion is incorrect for tests
 	errTestIncorrectConversion = errors.New("incorrect conversion")

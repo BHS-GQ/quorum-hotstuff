@@ -82,11 +82,11 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
 		return errVerifyUnsealedProposal
 	}
-	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
+	if err := c.extend(data, msg.Proposal, msg.HighQC); err != nil {
 		logger.Trace("Failed to check extend", "msg", msgTyp, "err", err)
 		return errExtend
 	}
-	if err := c.safeNode(msg.Proposal, msg.HighQC); err != nil {
+	if err := c.safeNode(data, msg.Proposal, msg.HighQC); err != nil {
 		logger.Trace("Failed to check safeNode", "msg", msgTyp, "err", err)
 		return errSafeNode
 	}
@@ -144,12 +144,12 @@ func (c *core) createNewProposal() (hotstuff.Proposal, error) {
 	return req.Proposal, nil
 }
 
-func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+func (c *core) extend(data *hotstuff.Message, proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
-	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(data, c.expectedMsg, highQC, c.valSet); err != nil {
 		return err
 	}
 	if highQC.Hash != block.ParentHash() {
@@ -159,7 +159,7 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 }
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
-func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+func (c *core) safeNode(data *hotstuff.Message, proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
 	logger := c.newLogger()
 
 	if proposal.Number().Uint64() == 1 {
@@ -171,7 +171,7 @@ func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert)
 		logger.Trace("safeNodeChecking", "lockQC", "is nil")
 		return errSafeNode
 	}
-	if err := c.extend(proposal, c.current.PreCommittedQC()); err == nil {
+	if err := c.extend(data, proposal, c.current.PreCommittedQC()); err == nil {
 		safety = true
 	} else {
 		logger.Trace("safeNodeChecking", "extend err", err)

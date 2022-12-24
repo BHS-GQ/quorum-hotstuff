@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
 )
 
 var (
@@ -62,9 +63,8 @@ func appendValidators(genesis *core.Genesis, addrs []common.Address) {
 	genesis.ExtraData = genesis.ExtraData[:types.HotstuffExtraVanity]
 
 	ist := &types.HotstuffExtra{
-		Validators:    addrs,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
+		Validators: addrs,
+		Seal:       []byte{},
 	}
 
 	istPayload, err := rlp.EncodeToBytes(&ist)
@@ -250,5 +250,5 @@ func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 
 func newTestSigner() hotstuff.Signer {
 	key, _ := generatePrivateKey()
-	return snr.NewSigner(key, 3)
+	return snr.NewSigner(key, 3, bn256.NewSuite())
 }

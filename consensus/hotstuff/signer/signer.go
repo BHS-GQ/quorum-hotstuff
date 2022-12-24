@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -105,6 +106,7 @@ func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
 }
 
 func (s *SignerImpl) AggregateSignature(valSet hotstuff.ValidatorSet, collectionPub, collectionSig map[common.Address][]byte) ([]byte, []byte, []byte, error) {
+	s.logger.Info("AggregateSignature")
 	if err := s.collectSignature(valSet, collectionPub); err != nil {
 		return nil, nil, nil, err
 	}
@@ -129,7 +131,8 @@ func (s *SignerImpl) AggregateSignature(valSet hotstuff.ValidatorSet, collection
 func (s *SignerImpl) collectSignature(valSet hotstuff.ValidatorSet, collection map[common.Address][]byte) error {
 	for addr, pubByte := range collection {
 		if addr == s.Address() {
-			return errInvalidProposal
+			continue
+			// return errInvalidProposalMyself
 		}
 		pub := s.suite.G2().Point()
 		if err := pub.UnmarshalBinary(pubByte); err != nil {
@@ -148,10 +151,12 @@ func (s *SignerImpl) collectSignature(valSet hotstuff.ValidatorSet, collection m
 }
 
 func (s *SignerImpl) UpdateMask(valSet hotstuff.ValidatorSet) error {
+	s.logger.Info("UpdateMask")
 	convert := func(keyPair map[common.Address]kyber.Point) []kyber.Point {
 		keyPairSlice := make([]kyber.Point, 0, 100)
 		for addr, pub := range keyPair {
 			if _, val := valSet.GetByAddress(addr); val != nil {
+				s.logger.Trace("Found addr", addr)
 				keyPairSlice = append(keyPairSlice, pub)
 			}
 		}
@@ -160,7 +165,7 @@ func (s *SignerImpl) UpdateMask(valSet hotstuff.ValidatorSet) error {
 
 	var err error
 	filteredList := convert(s.aggregatedKeyPair)
-	if len(filteredList) != valSet.Size() {
+	if len(filteredList) != valSet.F() {
 		// This shouldn't happen because the process stops due to the state not set to StateAcceptRequest yet
 		return errInsufficientAggPub
 	}
@@ -286,8 +291,12 @@ func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
 	return nil
 }
 
-func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
-	qc = msg.qc
+func (s *SignerImpl) VerifyQC(
+	msg *hotstuff.Message,
+	expectedMsg []byte,
+	qc *hotstuff.QuorumCert,
+	valSet hotstuff.ValidatorSet,
+) error {
 	if qc.View.Height.Uint64() == 0 {
 		return nil
 	}
@@ -309,7 +318,7 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 	}
 
 	// check aggsigs
-	if err := s.verifySig(extra.AggregatedKey, extra.AggregatedSig); err != nil {
+	if err := s.verifySig(expectedMsg, msg.AggPub, msg.AggSign); err != nil {
 		return err
 	}
 
@@ -320,7 +329,7 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 	return nil
 }
 
-func (s *SignerImpl) verifySig(aggKeyByte, aggSigByte []byte) error {
+func (s *SignerImpl) verifySig(expectedMsg []byte, aggKeyByte, aggSigByte []byte) error {
 	// UnmarshalBinary aggKeyByte to kyber.Point
 	aggKey := s.suite.G2().Point()
 	if err := aggKey.UnmarshalBinary(aggKeyByte); err != nil {
@@ -328,18 +337,76 @@ func (s *SignerImpl) verifySig(aggKeyByte, aggSigByte []byte) error {
 	}
 
 	// Regenerate the *message
-	msg := s.core.CurrentRoundstate().Message(roundChange)
-	signedData, err := msg.PayloadNoAddrNoAggNoSig()
-	if err != nil {
-		return err
-	}
-	if err := bdn.Verify(s.suite, aggKey, signedData, aggSigByte); err != nil {
+	// [TODO] find way to get origm
+	if err := bdn.Verify(s.suite, aggKey, expectedMsg, aggSigByte); err != nil {
 		return err
 	}
 	return nil
 }
 
+func (s *SignerImpl) verifyMask(valSet hotstuff.ValidatorSet, mask []byte) error {
+	s.logger.Info("verifyMask")
+
+	if len(mask) != (valSet.Size()+7)/8 {
+		return errInsufficientAggPub
+	}
+
+	count := 0
+	for i := range valSet.List() {
+		byteIndex := i / 8
+		m := byte(1) << uint(i&7)
+		if (mask[byteIndex] & m) != 0 {
+			count++
+		}
+	}
+	// This excludes the speaker
+	if count < valSet.F() {
+		return errInvalidAggregatedSig
+	}
+	return nil
+}
+
 // GetSignatureAddress gets the address address from the signature
+func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
+	// 1. Get signature address
+	signer, err := getSignatureAddress(data, sig)
+	if err != nil {
+		return common.Address{}, err
+	}
+
+	// 2. Check validator
+	if _, val := valSet.GetByAddress(signer); val != nil {
+		return val.Address(), nil
+	}
+
+	return common.Address{}, errUnauthorizedAddress
+}
+
+func (s *SignerImpl) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+	var (
+		buf  bytes.Buffer
+		vals = valSet.AddressList()
+	)
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < types.HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.HotstuffExtraVanity])
+
+	ist := &types.HotstuffExtra{
+		Validators: vals,
+		Seal:       []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(buf.Bytes(), payload...), nil
+}
+
 func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	// 1. Keccak data
 	hashData := crypto.Keccak256(data)

@@ -230,8 +230,10 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, valSet hotstuff.Validato
 
 	payload, err := rlp.EncodeToBytes(&hotStuffExtra)
 	if err != nil {
-		return nil
+		return nil, err
 	}
+
+	h.Extra = append(h.Extra[:types.HotstuffExtraVanity], payload...)
 
 	return block, nil
 }
