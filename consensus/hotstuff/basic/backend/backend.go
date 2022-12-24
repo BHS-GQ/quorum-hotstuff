@@ -34,11 +34,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
-	"go.dedis.ch/kyber/v3"
-	"go.dedis.ch/kyber/v3/sign/bdn"
-	"go.dedis.ch/kyber/v3/util/random"
 )
 
 const (
@@ -77,11 +75,6 @@ type backend struct {
 	eventMux *event.TypeMux
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
-
-	// BLS Upgrade - aggregated signature
-	aggregatedPub kyber.Point
-	aggregatedPrv kyber.Scalar
-	// /BLS Upgrade
 }
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
@@ -89,7 +82,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
+	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote), config.Suite)
 	backend := &backend{
 		config:         config,
 		db:             db,
@@ -105,7 +98,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		proposals:      make(map[common.Address]bool),
 	}
 
-	backend.aggregatedPrv, backend.aggregatedPub = bdn.NewKeyPair(config.Suite, random.New())
 	backend.core = hsc.New(backend, config, signer, valset)
 	return backend
 }
@@ -213,7 +205,7 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+func (s *backend) PreCommit(proposal hotstuff.Proposal, valSet hotstuff.ValidatorSet, collectionPub, collectionSig map[common.Address][]byte) (hotstuff.Proposal, error) {
 	// Check if the proposal is a valid block
 	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
@@ -223,13 +215,23 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 	}
 
 	h := block.Header()
-	// Append seals into extra-data
-	if err := s.signer.SealAfterCommit(h, seals); err != nil {
+	// Aggregate the signature
+	mask, aggSig, aggKey, err := s.signer.AggregateSignature(valSet, collectionPub, collectionSig)
+	if err != nil {
 		return nil, err
 	}
+	hotStuffExtra, err := types.ExtractHotstuffExtra(h)
+	if err != nil {
+		return nil, err
+	}
+	copy(hotStuffExtra.Mask, mask)
+	copy(hotStuffExtra.AggregatedKey, aggKey)
+	copy(hotStuffExtra.AggregatedSig, aggSig)
 
-	// update block's header
-	block = block.WithSeal(h)
+	payload, err := rlp.EncodeToBytes(&hotStuffExtra)
+	if err != nil {
+		return nil
+	}
 
 	return block, nil
 }

@@ -13,26 +13,36 @@ var (
 	// to identify whether the block is from Hotstuff consensus engine
 	HotstuffDigest = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 
+	// (Genesis): 32B+Validators+65B
+	// (Non-genesis): 32B+Mask+AggregatedKey+AggregatedSig+65B
 	HotstuffExtraVanity = 32 // Fixed number of extra-data bytes reserved for validator vanity
 	HotstuffExtraSeal   = 65 // Fixed number of extra-data bytes reserved for validator seal
 
+	HotStuffExtraAggSig = 1024 * 10 // For calculating AggSig
+
 	// ErrInvalidHotstuffHeaderExtra is returned if the length of extra-data is less than 32 bytes
-	ErrInvalidHotstuffHeaderExtra = errors.New("invalid istanbul header extra-data")
+	ErrInvalidHotstuffHeaderExtra = errors.New("invalid hotstuff header extra-data")
 )
 
 type HotstuffExtra struct {
-	Validators    []common.Address
-	Seal          []byte
-	CommittedSeal [][]byte
-	Salt          []byte
+	Validators []common.Address
+
+	Mask          []byte
+	AggregatedKey []byte
+	AggregatedSig []byte
+
+	Seal []byte
+	Salt []byte
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,
+		ist.Mask,
+		ist.AggregatedKey,
+		ist.AggregatedSig,
 		ist.Seal,
-		ist.CommittedSeal,
 		ist.Salt,
 	})
 }
@@ -41,14 +51,16 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
 		Validators    []common.Address
+		Mask          []byte
+		AggregatedKey []byte
+		AggregatedSig []byte
 		Seal          []byte
-		CommittedSeal [][]byte
 		Salt          []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
+	ist.Validators, ist.Seal, ist.Mask, ist.AggregatedKey, ist.AggregatedSig, ist.Salt = extra.Validators, extra.Seal, extra.Mask, extra.AggregatedKey, extra.AggregatedSig, extra.Salt
 	return nil
 }
 
@@ -85,7 +97,6 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	if !keepSeal {
 		extra.Seal = []byte{}
 	}
-	extra.CommittedSeal = [][]byte{}
 	extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)

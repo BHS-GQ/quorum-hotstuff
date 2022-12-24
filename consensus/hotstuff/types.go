@@ -162,12 +162,13 @@ func RegisterMsgTypeConvertHandler(handler MsgTypeConvert) {
 }
 
 type Message struct {
-	Code          MsgType
-	View          *View
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
+	Code      MsgType
+	View      *View
+	Msg       []byte
+	Address   common.Address
+	Signature []byte
+	AggPub    []byte
+	AggSign   []byte
 }
 
 // ==============================================
@@ -176,18 +177,19 @@ type Message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.AggPub, m.AggSign})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Code          uint64
-		View          *View
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
+		Code      uint64
+		View      *View
+		Msg       []byte
+		Address   common.Address
+		Signature []byte
+		AggPub    []byte
+		AggSign   []byte
 	}
 
 	if err := s.Decode(&msg); err != nil {
@@ -195,7 +197,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	}
 
 	code := MsgTypeConvertHandler(msg.Code)
-	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Code, m.View, m.Msg, m.Address, m.Signature, m.AggPub, m.AggSign = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.AggPub, msg.AggSign
 	return nil
 }
 
@@ -231,6 +233,17 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 
 func (m *Message) Payload() ([]byte, error) {
 	return rlp.EncodeToBytes(m)
+}
+
+func (m *Message) PayloadNoAddrNoAggNoSig() ([]byte, error) {
+	return rlp.EncodeToBytes(&Message{
+		Code:      m.Code,
+		Msg:       m.Msg,
+		Address:   common.Address{},
+		Signature: []byte{},
+		AggPub:    []byte{},
+		AggSign:   []byte{},
+	})
 }
 
 func (m *Message) PayloadNoSig() ([]byte, error) {

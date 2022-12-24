@@ -194,3 +194,11 @@ func (c *core) newRoundChangeTimer() {
 		c.sendEvent(timeoutEvent{})
 	})
 }
+
+func (c *core) addAggPub(address common.Address, pubByte []byte) (int, error) {
+	return c.signer.AddAggPub(c.valSet, address, pubByte)
+}
+
+func (c *core) countAggPub() int {
+	return c.signer.CountAggPub()
+}
