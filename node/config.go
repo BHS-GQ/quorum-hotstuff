@@ -18,6 +18,7 @@ package node
 
 import (
 	"crypto/ecdsa"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -40,6 +41,8 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/plugin"
 	"github.com/ethereum/go-ethereum/rpc"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
+	"go.dedis.ch/kyber/v3/share"
 )
 
 const (
@@ -48,6 +51,8 @@ const (
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
 	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
+	datadirBLSPrivateKey   = "bls_private_key.conf"
+	datadirBLSPublicKey    = "bls_public_key.conf"
 )
 
 // Config represents a small collection of configuration values to fine tune the
@@ -330,11 +335,13 @@ func (c *Config) name() string {
 
 // These resources are resolved differently for "geth" instances.
 var isOldGethResource = map[string]bool{
-	"chaindata":          true,
-	"nodes":              true,
-	"nodekey":            true,
-	"static-nodes.json":  false, // no warning for these because they have their
-	"trusted-nodes.json": false, // own separate warning.
+	"chaindata":            true,
+	"nodes":                true,
+	"nodekey":              true,
+	"bls_private_key.conf": true,
+	"bls_public_key.conf":  true,
+	"static-nodes.json":    false, // no warning for these because they have their
+	"trusted-nodes.json":   false, // own separate warning.
 }
 
 // ResolvePath resolves path in the instance directory.
@@ -598,4 +605,82 @@ func (c *Config) warnOnce(w *bool, format string, args ...interface{}) {
 	}
 	l.Warn(fmt.Sprintf(format, args...))
 	*w = true
+}
+
+// HotStuff
+
+type PriShare struct {
+	Index int    `json:"Index"`
+	Pri   []byte `json:"Pri"`
+}
+
+type PubShare struct {
+	Index int    `json:"Index"`
+	Pub   []byte `json:"Pub"`
+}
+
+// Decode public shares from pub-key.conf file...
+func decodePubShare(suite *bn256.Suite, keyfile string, n, t int) *share.PubPoly {
+	log.Info("decodePubShare", "keyfile", keyfile)
+	// Read public keys from file.
+	plan, _ := ioutil.ReadFile(keyfile)
+	var data []PubShare
+	err := json.Unmarshal(plan, &data)
+	if err != nil {
+		log.Error("Couldn't Unmarshal public key json", "err", err)
+	}
+
+	dePubShares := make([]*share.PubShare, n)
+
+	for i, d := range data {
+		point := suite.G2().Point()
+		var err error
+		dePubShares[i] = &share.PubShare{}
+		dePubShares[i].I = d.Index
+		err = point.UnmarshalBinary(d.Pub)
+		if err != nil {
+			log.Error("Couldn't Unmarshal public key binary", "idx", i, "err", err)
+		}
+		dePubShares[i].V = point
+	}
+	// Recover public key.
+	pubKey, err := share.RecoverPubPoly(suite.G2(), dePubShares, t, n)
+	if err != nil {
+		log.Error("Couldn't recover BLS public key", "err", err)
+	}
+	return pubKey
+}
+
+func decodePriShare(suite *bn256.Suite, keyfile string) *share.PriShare {
+	log.Info("decodePriShare", "keyfile", keyfile)
+	// Read private key from file.
+	plan, _ := ioutil.ReadFile(keyfile)
+	var data PriShare
+	err := json.Unmarshal(plan, &data)
+	if err != nil {
+		log.Error("Couldn't Unmarshal private key json", "err", err)
+	}
+
+	scalar := suite.G2().Scalar()
+	err = scalar.UnmarshalBinary(data.Pri)
+	if err != nil {
+		log.Error("Couldn't Unmarshal private key binary", "err", err)
+	}
+
+	partialPriKey := &share.PriShare{I: data.Index, V: scalar}
+
+	// Construct a prishare struct and return.
+	return partialPriKey
+}
+
+func (c *Config) BLSKeys(n, t int) (*bn256.Suite, *share.PubPoly, *share.PriShare) {
+	c.Logger.Info("Reading BLS Keys", "n", n, "t", t)
+	suite := bn256.NewSuite()
+
+	pubkeyFile := c.ResolvePath(datadirBLSPublicKey)
+	pubkey := decodePubShare(suite, pubkeyFile, n, t)
+	privkeyFile := c.ResolvePath(datadirBLSPrivateKey)
+	privkey := decodePriShare(suite, privkeyFile)
+
+	return suite, pubkey, privkey
 }

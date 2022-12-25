@@ -37,6 +37,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
+	"go.dedis.ch/kyber/v3/share"
 )
 
 const (
@@ -77,12 +79,20 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
+func New(
+	config *hotstuff.Config,
+	privateKey *ecdsa.PrivateKey,
+	db ethdb.Database,
+	valset hotstuff.ValidatorSet,
+	suite *bn256.Suite,
+	blsPubPoly *share.PubPoly,
+	blsPrivKey *share.PriShare,
+) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote), config.Suite)
+	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote), suite)
 	backend := &backend{
 		config:         config,
 		db:             db,
@@ -97,6 +107,9 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recents:        recents,
 		proposals:      make(map[common.Address]bool),
 	}
+
+	backend.logger.Debug("PubPoly", "res", blsPubPoly)
+	backend.logger.Debug("PrivKey", "res", blsPrivKey)
 
 	backend.core = hsc.New(backend, config, signer, valset)
 	return backend

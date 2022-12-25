@@ -256,7 +256,12 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		}
 		valset := validator.NewSet(validators, hotstuff.RoundRobin)
 
-		return hotstuffBackend.New(config, nodeKey, db, valset)
+		// Get BLS keys
+		n := valset.Size()
+		t := valset.Q()
+		suite, blsPubPoly, blsPrivKey := stack.Config().BLSKeys(n, t)
+
+		return hotstuffBackend.New(config, nodeKey, db, valset, suite, blsPubPoly, blsPrivKey)
 	}
 	// /HotStuff
 
