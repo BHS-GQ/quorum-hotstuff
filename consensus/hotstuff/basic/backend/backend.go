@@ -34,7 +34,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
 	"go.dedis.ch/kyber/v3/pairing/bn256"
@@ -92,7 +91,9 @@ func New(
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote), suite)
+	t, n := valset.Q(), valset.Size()
+
+	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote), suite, blsPubPoly, blsPrivKey, t, n)
 	backend := &backend{
 		config:         config,
 		db:             db,
@@ -218,7 +219,7 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, valSet hotstuff.ValidatorSet, collectionPub, collectionSig map[common.Address][]byte) (hotstuff.Proposal, error) {
+func (s *backend) PreCommit(proposal hotstuff.Proposal, valSet hotstuff.ValidatorSet) (hotstuff.Proposal, error) {
 	// Check if the proposal is a valid block
 	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
@@ -228,25 +229,9 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, valSet hotstuff.Validato
 	}
 
 	h := block.Header()
-	// Aggregate the signature
-	mask, aggSig, aggKey, err := s.signer.AggregateSignature(valSet, collectionPub, collectionSig)
-	if err != nil {
-		return nil, err
-	}
-	hotStuffExtra, err := types.ExtractHotstuffExtra(h)
-	if err != nil {
-		return nil, err
-	}
-	copy(hotStuffExtra.Mask, mask)
-	copy(hotStuffExtra.AggregatedKey, aggKey)
-	copy(hotStuffExtra.AggregatedSig, aggSig)
 
-	payload, err := rlp.EncodeToBytes(&hotStuffExtra)
-	if err != nil {
-		return nil, err
-	}
-
-	h.Extra = append(h.Extra[:types.HotstuffExtraVanity], payload...)
+	// update block's header
+	block = block.WithSeal(h)
 
 	return block, nil
 }

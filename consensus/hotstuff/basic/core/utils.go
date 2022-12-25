@@ -126,8 +126,6 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	// msg only has Code and Msg
 	msg.Address = c.Address()
 	msg.View = c.currentView()
-	msg.AggPub = []byte{}
-	msg.AggSign = []byte{}
 
 	// Add proof of consensus
 	proposal := c.current.Proposal()
@@ -135,16 +133,6 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 		switch msg.Code {
 		case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
 			// Sign
-			encodedData, err := msg.PayloadNoAddrNoAggNoSig()
-			if err != nil {
-				return nil, err
-			}
-
-			// msg.AggSign is partially-signed
-			msg.AggPub, msg.AggSign, err = c.signer.AggregatedSignedFromSingle(encodedData)
-			if err != nil {
-				return nil, err
-			}
 
 		case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
 			// Add Threshold Signature as proof

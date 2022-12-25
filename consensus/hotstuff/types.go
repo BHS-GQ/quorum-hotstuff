@@ -162,13 +162,12 @@ func RegisterMsgTypeConvertHandler(handler MsgTypeConvert) {
 }
 
 type Message struct {
-	Code      MsgType
-	View      *View
-	Msg       []byte
-	Address   common.Address
-	Signature []byte
-	AggPub    []byte
-	AggSign   []byte
+	Code         MsgType
+	View         *View
+	Msg          []byte
+	Address      common.Address
+	Signature    []byte // Used for ECDSA signature
+	BLSSignature []byte // BLS: Used for either partial sig or thresholded sig
 }
 
 // ==============================================
@@ -177,19 +176,18 @@ type Message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.AggPub, m.AggSign})
+	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Code      uint64
-		View      *View
-		Msg       []byte
-		Address   common.Address
-		Signature []byte
-		AggPub    []byte
-		AggSign   []byte
+		Code         uint64
+		View         *View
+		Msg          []byte
+		Address      common.Address
+		Signature    []byte
+		BLSSignature []byte
 	}
 
 	if err := s.Decode(&msg); err != nil {
@@ -197,7 +195,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	}
 
 	code := MsgTypeConvertHandler(msg.Code)
-	m.Code, m.View, m.Msg, m.Address, m.Signature, m.AggPub, m.AggSign = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.AggPub, msg.AggSign
+	m.Code, m.View, m.Msg, m.Address, m.Signature, m.BLSSignature = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.BLSSignature
 	return nil
 }
 
@@ -237,25 +235,23 @@ func (m *Message) Payload() ([]byte, error) {
 
 func (m *Message) PayloadNoAddrNoAggNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&Message{
-		Code:      m.Code,
-		View:      m.View,
-		Msg:       m.Msg,
-		Address:   common.Address{},
-		Signature: []byte{},
-		AggPub:    []byte{},
-		AggSign:   []byte{},
+		Code:         m.Code,
+		View:         m.View,
+		Msg:          m.Msg,
+		Address:      common.Address{},
+		Signature:    []byte{},
+		BLSSignature: []byte{},
 	})
 }
 
 func (m *Message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&Message{
-		Code:      m.Code,
-		View:      m.View,
-		Msg:       m.Msg,
-		Address:   m.Address,
-		Signature: []byte{},
-		AggPub:    m.AggPub,
-		AggSign:   m.AggSign,
+		Code:         m.Code,
+		View:         m.View,
+		Msg:          m.Msg,
+		Address:      m.Address,
+		Signature:    []byte{},
+		BLSSignature: []byte{},
 	})
 }
 
@@ -264,7 +260,7 @@ func (m *Message) Decode(val interface{}) error {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
+	return fmt.Sprintf("{MsgType: %s, Address: %s, Signature: %x, BLSSignature: %x}", m.Code.String(), m.Address.Hex(), m.Signature, m.BLSSignature)
 }
 
 func RLPHash(v interface{}) (h common.Hash) {

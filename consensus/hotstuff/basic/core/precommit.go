@@ -1,7 +1,6 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -36,15 +35,7 @@ func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator)
 	logger.Trace("handlePrepareVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
-		collectionPub := make(map[common.Address][]byte)
-		collectionSig := make(map[common.Address][]byte)
-
-		for _, msg := range c.current.PrepareVotes() {
-			// Notes: msg.AggPub and msg.AggSign are assigned by calling core.go/finalizeMessage at the delegators' sides
-			collectionPub[msg.Address], collectionSig[msg.Address] = msg.AggPub, msg.AggSign
-		}
-
-		newProposal, err := c.backend.PreCommit(c.current.Proposal(), c.valSet, collectionPub, collectionSig)
+		newProposal, err := c.backend.PreCommit(c.current.Proposal(), c.valSet)
 		if err != nil {
 			logger.Trace("Failed to assemble partial sigs", "err", err)
 			return err
@@ -70,28 +61,13 @@ func (c *core) sendPreCommit() {
 		PrepareQC: c.current.PrepareQC(),
 	}
 	payload, err := Encode(msg)
-
-	collectionPub := make(map[common.Address][]byte)
-	collectionSig := make(map[common.Address][]byte)
-	for _, msg := range c.current.preCommitVotes.Values() {
-		// Notes: msg.AggPub and msg.AggSign are assigned by calling core.go/finalizeMessage at the delegators' sides
-		collectionPub[msg.Address], collectionSig[msg.Address] = msg.AggPub, msg.AggSign
-	}
-	// Use mask aggsign and aggpub fields for aggsig and aggkey
-	_, aggSig, aggKey, err := c.signer.AggregateSignature(c.valSet, collectionPub, collectionSig)
-	if err != nil {
-		logger.Error("Failed to aggregate", "msg", msgTyp, "err", err)
-	}
-
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&hotstuff.Message{
-		Code:    msgTyp,
-		Msg:     payload,
-		AggSign: aggSig,
-		AggPub:  aggKey,
+		Code: msgTyp,
+		Msg:  payload,
 	})
 	logger.Trace("sendPreCommit", "msg view", msg.View, "proposal", msg.Proposal.Hash())
 }
@@ -123,7 +99,7 @@ func (c *core) handlePreCommit(data *hotstuff.Message, src hotstuff.Validator) e
 		logger.Trace("Failed to check verify proposal", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := c.signer.VerifyQC(data, c.expectedMsg, msg.PrepareQC, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}

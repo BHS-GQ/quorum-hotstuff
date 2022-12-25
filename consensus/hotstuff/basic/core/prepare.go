@@ -149,7 +149,7 @@ func (c *core) extend(data *hotstuff.Message, proposal hotstuff.Proposal, highQC
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
-	if err := c.signer.VerifyQC(data, c.expectedMsg, highQC, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
 		return err
 	}
 	if highQC.Hash != block.ParentHash() {

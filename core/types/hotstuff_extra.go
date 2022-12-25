@@ -13,12 +13,8 @@ var (
 	// to identify whether the block is from Hotstuff consensus engine
 	HotstuffDigest = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 
-	// (Genesis): 32B+Validators+65B
-	// (Non-genesis): 32B+Mask+AggregatedKey+AggregatedSig+65B
 	HotstuffExtraVanity = 32 // Fixed number of extra-data bytes reserved for validator vanity
 	HotstuffExtraSeal   = 65 // Fixed number of extra-data bytes reserved for validator seal
-
-	HotStuffExtraAggSig = 1024 * 10 // For calculating AggSig
 
 	// ErrInvalidHotstuffHeaderExtra is returned if the length of extra-data is less than 32 bytes
 	ErrInvalidHotstuffHeaderExtra = errors.New("invalid hotstuff header extra-data")
@@ -27,9 +23,7 @@ var (
 type HotstuffExtra struct {
 	Validators []common.Address
 
-	Mask          []byte
-	AggregatedKey []byte
-	AggregatedSig []byte
+	BLSSignature []byte
 
 	Seal []byte
 	Salt []byte
@@ -39,9 +33,7 @@ type HotstuffExtra struct {
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,
-		ist.Mask,
-		ist.AggregatedKey,
-		ist.AggregatedSig,
+		ist.BLSSignature,
 		ist.Seal,
 		ist.Salt,
 	})
@@ -50,17 +42,15 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
-		Validators    []common.Address
-		Mask          []byte
-		AggregatedKey []byte
-		AggregatedSig []byte
-		Seal          []byte
-		Salt          []byte
+		Validators   []common.Address
+		BLSSignature []byte
+		Seal         []byte
+		Salt         []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.Mask, ist.AggregatedKey, ist.AggregatedSig, ist.Salt = extra.Validators, extra.Seal, extra.Mask, extra.AggregatedKey, extra.AggregatedSig, extra.Salt
+	ist.Validators, ist.Seal, ist.BLSSignature, ist.Salt = extra.Validators, extra.Seal, extra.BLSSignature, extra.Salt
 	return nil
 }
 
