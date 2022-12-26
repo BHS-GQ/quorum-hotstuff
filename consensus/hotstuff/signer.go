@@ -20,5 +20,5 @@ type Signer interface {
 	SealBeforeCommit(h *types.Header) error
 	CheckSignature(valSet ValidatorSet, data []byte, sig []byte) (common.Address, error)
 	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
-	VerifyQC(qc *QuorumCert, valSet ValidatorSet) error
+	VerifyQC(qc *QuorumCert) error
 }

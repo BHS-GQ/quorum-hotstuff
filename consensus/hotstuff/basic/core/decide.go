@@ -1,6 +1,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -42,8 +44,13 @@ func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) 
 	logger.Trace("handleCommitVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
+		commitQC, err := c.messages2qc(msgTyp)
+		if err != nil {
+			logger.Trace("Failed to assemble commitQC", "msg", msgTyp, "err", err)
+			return err
+		}
 		c.current.SetState(StateCommitted)
-		c.current.SetCommittedQC(c.current.PreCommittedQC())
+		c.current.SetCommittedQC(commitQC)
 		logger.Trace("acceptCommit", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest, "msgSize", size)
 
 		c.sendDecide()
@@ -63,10 +70,7 @@ func (c *core) sendDecide() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{
-		Code: msgTyp,
-		Msg:  payload,
-	})
+	c.broadcast(msgTyp, payload)
 	logger.Trace("sendDecide", "msg view", sub.View, "proposal", sub.Hash)
 }
 
@@ -93,11 +97,28 @@ func (c *core) handleDecide(data *hotstuff.Message, src hotstuff.Validator) erro
 		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(msg); err != nil {
 		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
 		return err
 	}
 
+	// ensure the block hash is the correct one
+	blockHash := msg.Hash
+	lockedBlock := c.current.Proposal().(*types.Block)
+	emptyHash := common.Hash{}
+	if lockedBlock == nil {
+		logger.Trace("Locked block is nil", "msg", msgTyp, "src", src)
+		return fmt.Errorf("invalid block")
+	} else if blockHash == emptyHash || lockedBlock.Hash() != blockHash {
+		logger.Trace("Failed to check block hash", "msg", msgTyp, "src", src, "expect block", lockedBlock.Hash(), "got", blockHash)
+		return fmt.Errorf("invalid block")
+	}
+
+	currHash := c.current.Proposal().Hash()
+	if currHash != msg.Hash {
+		logger.Trace("Failed to check commitQC", "expect node", currHash, "got", msg.Hash)
+		return fmt.Errorf("invalid block")
+	}
 	logger.Trace("handleDecide", "msg", msgTyp, "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
 
 	if c.IsProposer() && c.currentState() == StateCommitted {

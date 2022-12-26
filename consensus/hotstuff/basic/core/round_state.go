@@ -110,17 +110,18 @@ func (s *roundState) PendingRequest() *hotstuff.Request {
 	return s.pendingRequest
 }
 
-func (s *roundState) Vote() *Vote {
+func (s *roundState) Vote(code MsgType) *Vote {
 	if s.proposal == nil || s.proposal.Hash() == EmptyHash {
 		return nil
 	}
 
 	return &Vote{
+		Code: code,
 		View: &hotstuff.View{
 			Round:  new(big.Int).Set(s.round),
 			Height: new(big.Int).Set(s.height),
 		},
-		Digest: s.proposal.Hash(),
+		Digest: s.proposal.Hash(), // Instead of sending entire proposal, use hash
 	}
 }
 
@@ -153,8 +154,16 @@ func (s *roundState) AddPreCommitVote(msg *hotstuff.Message) error {
 	return s.preCommitVotes.Add(msg)
 }
 
+func (s *roundState) PreCommitVotes() []*hotstuff.Message {
+	return s.preCommitVotes.Values()
+}
+
 func (s *roundState) PreCommitVoteSize() int {
 	return s.preCommitVotes.Size()
+}
+
+func (s *roundState) CommitVotes() []*hotstuff.Message {
+	return s.commitVotes.Values()
 }
 
 func (s *roundState) AddCommitVote(msg *hotstuff.Message) error {

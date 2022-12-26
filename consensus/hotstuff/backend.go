@@ -44,8 +44,8 @@ type Backend interface {
 	// Unicast send a message to single peer
 	Unicast(valSet ValidatorSet, payload []byte) error
 
-	// PreCommit write seal to header and assemble new qc
-	PreCommit(proposal Proposal, valSet ValidatorSet) (Proposal, error)
+	// // PreCommit write seal to header and assemble new qc
+	// PreCommit(proposal Proposal, valSet ValidatorSet) (Proposal, error)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.

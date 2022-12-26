@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -215,26 +216,19 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func (s *HotstuffSigner) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
+func (s *HotstuffSigner) VerifyQC(qc *hotstuff.QuorumCert) error {
+	// skip genesis block
 	if qc.View.Height.Uint64() == 0 {
 		return nil
 	}
-	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
-	if err != nil {
-		return err
-	}
 
 	// check proposer signature
-	addr, err := getSignatureAddress(qc.Hash.Bytes(), extra.Seal)
-	if err != nil {
-		return err
-	}
-	if addr != qc.Proposer {
-		return errInvalidSigner
-	}
-	if idx, _ := valSet.GetByAddress(addr); idx < 0 {
-		return errInvalidSigner
-	}
+	data, _ := core.Encode(&core.Vote{
+		Code:   qc.Code,
+		View:   qc.View,
+		Digest: qc.Hash,
+	})
+	s.BLSVerifyAggSig(data, qc.BLSSignature)
 
 	return nil
 }

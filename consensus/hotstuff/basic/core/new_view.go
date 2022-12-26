@@ -23,10 +23,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		logger.Trace("Failed to encode", "msg", MsgTypeNewView, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{
-		Code: MsgTypeNewView,
-		Msg:  payload,
-	})
+	c.broadcast(MsgTypeNewView, payload)
 
 	logger.Trace("sendNewView", "prepareQC", prepareQC.Hash)
 }
@@ -52,7 +49,7 @@ func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) err
 		return err
 	}
 
-	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(msg.PrepareQC); err != nil {
 		logger.Trace("Failed to verify highQC", "msg", msgTyp, "err", err)
 		return err
 	}
@@ -65,7 +62,7 @@ func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) err
 	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
-		highQC := c.getHighQC()
+		highQC := c.getHighQC() // get highest PrepareQC
 		c.current.SetHighQC(highQC)
 		c.current.SetState(StateHighQC)
 		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "msgSize", size)

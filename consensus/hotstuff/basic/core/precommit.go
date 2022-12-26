@@ -27,6 +27,7 @@ func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator)
 		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
+	// [TODO] Check BLSSignature if possible
 	if err := c.current.AddPrepareVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
 		return errAddPrepareVote
@@ -35,15 +36,13 @@ func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator)
 	logger.Trace("handlePrepareVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
-		newProposal, err := c.backend.PreCommit(c.current.Proposal(), c.valSet)
+		prepareQC, err := c.messages2qc(msgTyp) // Necessary info is tracked by core
 		if err != nil {
-			logger.Trace("Failed to assemble partial sigs", "err", err)
 			return err
 		}
+		c.acceptPrepare(prepareQC, c.current.Proposal())
 
-		prepareQC := proposal2QC(newProposal, c.current.Round())
-		c.acceptPrepare(prepareQC, newProposal)
-		logger.Trace("acceptPrepare", "msg", msgTyp, "src", src.Address(), "hash", newProposal.Hash(), "msgSize", size)
+		logger.Trace("acceptPrepare", "msg", msgTyp, "src", src.Address(), "hash", c.current.proposal.Hash(), "msgSize", size)
 
 		c.sendPreCommit()
 	}
@@ -65,10 +64,7 @@ func (c *core) sendPreCommit() {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{
-		Code: msgTyp,
-		Msg:  payload,
-	})
+	c.broadcast(msgTyp, payload)
 	logger.Trace("sendPreCommit", "msg view", msg.View, "proposal", msg.Proposal.Hash())
 }
 
@@ -99,7 +95,7 @@ func (c *core) handlePreCommit(data *hotstuff.Message, src hotstuff.Validator) e
 		logger.Trace("Failed to check verify proposal", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
+	if err := c.signer.VerifyQC(msg.PrepareQC); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}
@@ -129,7 +125,7 @@ func (c *core) sendPreCommitVote() {
 	logger := c.newLogger()
 
 	msgTyp := MsgTypePreCommitVote
-	vote := c.current.Vote()
+	vote := c.current.Vote(msgTyp)
 	if vote == nil {
 		logger.Trace("Failed to send vote", "msg", msgTyp, "err", "current vote is nil")
 		return
@@ -139,6 +135,6 @@ func (c *core) sendPreCommitVote() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(msgTyp, payload)
 	logger.Trace("sendPreCommitVote", "vote view", vote.View, "vote", vote.Digest)
 }

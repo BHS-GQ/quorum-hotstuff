@@ -38,10 +38,11 @@ func (c *core) sendPrepare() {
 		return
 	}
 
+	// MsgPrepare to be agreed-upon
 	prepare := &MsgPrepare{
 		View:     c.currentView(),
-		Proposal: c.current.Proposal(),
-		HighQC:   c.current.HighQC(),
+		Proposal: c.current.Proposal(), // Block
+		HighQC:   c.current.HighQC(),   // No need to sign
 	}
 	payload, err := Encode(prepare)
 	if err != nil {
@@ -54,7 +55,9 @@ func (c *core) sendPrepare() {
 	time.Sleep(delay)
 	logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
 
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	// No need to sign PREPARE with BLS
+	c.broadcast(msgTyp, payload)
+
 	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
 }
 
@@ -65,10 +68,15 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		msg    *MsgPrepare
 		msgTyp = MsgTypePrepare
 	)
+
+	// MatchingMSG: prepare check
+	// Decode msg.Msg (aka. Payload) to MsgPrepare
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
 		return errFailedDecodePrepare
 	}
+
+	// MatchingMSG: view number check
 	if err := c.checkView(msgTyp, msg.View); err != nil {
 		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
@@ -82,16 +90,20 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
 		return errVerifyUnsealedProposal
 	}
-	if err := c.extend(data, msg.Proposal, msg.HighQC); err != nil {
+	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
 		logger.Trace("Failed to check extend", "msg", msgTyp, "err", err)
 		return errExtend
 	}
-	if err := c.safeNode(data, msg.Proposal, msg.HighQC); err != nil {
+	if err := c.safeNode(msg.Proposal, msg.HighQC); err != nil {
 		logger.Trace("Failed to check safeNode", "msg", msgTyp, "err", err)
 		return errSafeNode
 	}
-	if err := c.checkLockedProposal(msg.Proposal); err != nil {
+	if err := c.checkLockedProposal(msg.Proposal); err != nil { // Necessary?
 		logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
+		return err
+	}
+	if err := c.signer.VerifyQC(msg.HighQC); err != nil {
+		logger.Trace("Failed to verify highQC", "msg", msgTyp, "src", src, "err", err, "highQC", msg.HighQC.Hash)
 		return err
 	}
 
@@ -116,7 +128,7 @@ func (c *core) sendPrepareVote() {
 	logger := c.newLogger()
 
 	msgTyp := MsgTypePrepareVote
-	vote := c.current.Vote()
+	vote := c.current.Vote(msgTyp)
 	if vote == nil {
 		logger.Trace("Failed to send vote", "msg", msgTyp, "err", "current vote is nil")
 		return
@@ -126,7 +138,7 @@ func (c *core) sendPrepareVote() {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(msgTyp, payload)
 	logger.Trace("sendPrepareVote", "vote view", vote.View, "vote", vote.Digest)
 }
 
@@ -144,44 +156,42 @@ func (c *core) createNewProposal() (hotstuff.Proposal, error) {
 	return req.Proposal, nil
 }
 
-func (c *core) extend(data *hotstuff.Message, proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
-	block, ok := proposal.(*types.Block)
+func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+	if highQC == nil || highQC.View == nil {
+		return fmt.Errorf("invalid qc")
+	}
+
+	proposedBlock, ok := proposal.(*types.Block)
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
-	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
-		return err
-	}
-	if highQC.Hash != block.ParentHash() {
-		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.Hash)
+	if highQC.Hash != proposedBlock.ParentHash() {
+		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", proposedBlock.Hash(), proposedBlock.ParentHash(), highQC.Hash)
 	}
 	return nil
 }
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
-func (c *core) safeNode(data *hotstuff.Message, proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
 	logger := c.newLogger()
 
 	if proposal.Number().Uint64() == 1 {
 		return nil
 	}
-	safety := false
-	liveness := false
-	if c.current.PreCommittedQC() == nil {
+
+	lockQC := c.current.PreCommittedQC()
+	if lockQC == nil {
 		logger.Trace("safeNodeChecking", "lockQC", "is nil")
 		return errSafeNode
 	}
-	if err := c.extend(data, proposal, c.current.PreCommittedQC()); err == nil {
-		safety = true
-	} else {
-		logger.Trace("safeNodeChecking", "extend err", err)
+
+	proposedBlock, ok := proposal.(*types.Block)
+	if !ok {
+		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
-	if highQC.View.Cmp(c.current.PreCommittedQC().View) > 0 {
-		liveness = true
-	}
-	if safety || liveness {
+	if highQC.View.Cmp(lockQC.View) > 0 || proposedBlock.ParentHash() == lockQC.Hash {
 		return nil
-	} else {
-		return errSafeNode
 	}
+
+	return errSafeNode
 }

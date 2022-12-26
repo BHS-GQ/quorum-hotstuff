@@ -105,30 +105,35 @@ func (v *View) Sub(y *View) (int64, int64) {
 }
 
 type QuorumCert struct {
-	View     *View
-	Hash     common.Hash // block header sig hash
-	Proposer common.Address
-	Extra    []byte
+	View         *View
+	Code         MsgType
+	Hash         common.Hash // block header sig hash
+	Proposer     common.Address
+	BLSSignature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.View, qc.Hash, qc.Proposer, qc.Extra})
+	code := qc.Code.Value()
+	return rlp.Encode(w, []interface{}{qc.View, code, qc.Hash, qc.Proposer, qc.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	var cert struct {
-		View     *View
-		Hash     common.Hash
-		Proposer common.Address
-		Extra    []byte
+		View         *View
+		Code         uint64
+		Hash         common.Hash
+		Proposer     common.Address
+		BLSSignature []byte
 	}
 
 	if err := s.Decode(&cert); err != nil {
 		return err
 	}
-	qc.View, qc.Hash, qc.Proposer, qc.Extra = cert.View, cert.Hash, cert.Proposer, cert.Extra
+
+	code := MsgTypeConvertHandler(cert.Code)
+	qc.View, qc.Code, qc.Hash, qc.Proposer, qc.BLSSignature = cert.View, code, cert.Hash, cert.Proposer, cert.BLSSignature
 	return nil
 }
 

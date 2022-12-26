@@ -218,24 +218,6 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, valSet hotstuff.ValidatorSet) (hotstuff.Proposal, error) {
-	// Check if the proposal is a valid block
-	block := &types.Block{}
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return nil, errInvalidProposal
-	}
-
-	h := block.Header()
-
-	// update block's header
-	block = block.WithSeal(h)
-
-	return block, nil
-}
-
 func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// Check if the proposal is a valid block
 	block := &types.Block{}
