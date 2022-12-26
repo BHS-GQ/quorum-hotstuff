@@ -54,9 +54,11 @@ func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) err
 		return err
 	}
 
-	if err := c.current.AddNewViews(data); err != nil {
-		logger.Trace("Failed to add new view", "msg", msgTyp, "err", err)
-		return errAddNewViews
+	if data.Address != c.Address() {
+		if err := c.current.AddNewViews(data); err != nil {
+			logger.Trace("Failed to add new view", "msg", msgTyp, "err", err)
+			return errAddNewViews
+		}
 	}
 
 	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)

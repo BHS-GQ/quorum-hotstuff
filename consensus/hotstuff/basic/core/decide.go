@@ -35,10 +35,11 @@ func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) 
 		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
-
-	if err := c.current.AddCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
-		return errAddPreCommitVote
+	if data.Address != c.Address() {
+		if err := c.current.AddCommitVote(data); err != nil {
+			logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
+			return errAddPreCommitVote
+		}
 	}
 
 	logger.Trace("handleCommitVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)

@@ -138,7 +138,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert View: %v, Hash: %v, Proposer: %v}", qc.View, qc.Hash.String(), qc.Proposer.Hex())
+	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.Hash.String(), qc.Proposer.Hex())
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {

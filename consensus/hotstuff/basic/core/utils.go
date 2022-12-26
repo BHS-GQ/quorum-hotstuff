@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -52,11 +53,19 @@ func (c *core) checkPreCommittedQC(qc *hotstuff.QuorumCert) error {
 	if qc == nil {
 		return fmt.Errorf("external pre-committed qc is nil")
 	}
-	if c.current.PreCommittedQC() == nil {
-		return fmt.Errorf("current pre-committed qc is nil")
+	localQC := c.current.PreCommittedQC()
+	if localQC == nil {
+		return fmt.Errorf("current prepare qc is nil")
 	}
-	if !reflect.DeepEqual(c.current.PreCommittedQC(), qc) {
-		return fmt.Errorf("expect %s, got %s", c.current.PreCommittedQC().String(), qc.String())
+
+	if localQC.View.Cmp(qc.View) != 0 {
+		return fmt.Errorf("view unsame, expect %v, got %v", localQC.View, qc.View)
+	}
+	if localQC.Proposer != qc.Proposer {
+		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer, qc.Proposer)
+	}
+	if localQC.Hash != qc.Hash {
+		return fmt.Errorf("expect %v, got %v", localQC.Hash, qc.Hash)
 	}
 	return nil
 }
@@ -241,13 +250,19 @@ func (c *core) messages2qc(code MsgType) (*hotstuff.QuorumCert, error) {
 		Digest: proposalHash, // Instead of sending entire proposal, use hash
 	}
 	expectedVoteBytes, err := Encode(expectedVote)
+	c.logger.Trace("Expected vote", "vote", expectedVote, "byte", hex.EncodeToString(expectedVoteBytes))
 	if err != nil {
 		return nil, err
 	}
 
 	for _, msg := range msgs {
-		if bytes.Compare(msg.Msg, expectedVoteBytes) == 0 {
-			return nil, fmt.Errorf("Vote msg does not match exptected", "msgCode", msg.Code.String())
+		var vote Vote
+		// checking might not be needed, already done at handle...()
+		msg.Decode(&vote)
+		c.logger.Trace("Checking vote", "vote", vote, "byte", hex.EncodeToString(msg.Msg), "msgAddr", msg.Address)
+		if !bytes.Equal(expectedVoteBytes, msg.Msg) {
+			c.logger.Trace("SOMETHING WRONG")
+			return nil, fmt.Errorf("Vote bytes not equal!")
 		}
 		sigShares = append(sigShares, msg.BLSSignature)
 	}
@@ -258,6 +273,7 @@ func (c *core) messages2qc(code MsgType) (*hotstuff.QuorumCert, error) {
 	}
 
 	// Build QC
+	c.logger.Trace("Building QC")
 	block := c.current.Proposal().(*types.Block) // Be careful of pointers
 	h := block.Header()
 

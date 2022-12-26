@@ -28,16 +28,20 @@ func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator)
 		return err
 	}
 	// [TODO] Check BLSSignature if possible
-	if err := c.current.AddPrepareVote(data); err != nil {
-		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
-		return errAddPrepareVote
+	if data.Address != c.Address() {
+		if err := c.current.AddPrepareVote(data); err != nil {
+			logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
+			return errAddPrepareVote
+		}
 	}
 
 	logger.Trace("handlePrepareVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
+		logger.Trace("handlePrepareVote checking votes", "size", size)
 		prepareQC, err := c.messages2qc(msgTyp) // Necessary info is tracked by core
 		if err != nil {
+			logger.Trace("Failed to assemble prepareQC", "msg", msgTyp, "err", err)
 			return err
 		}
 		c.acceptPrepare(prepareQC, c.current.Proposal())
