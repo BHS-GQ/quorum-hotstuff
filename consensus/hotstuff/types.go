@@ -1,32 +1,103 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
 package hotstuff
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
+
+var (
+	EmptyHash    = common.Hash{}
+	EmptyAddress = common.Address{}
+)
+
+type MsgType uint64
+
+const (
+	MsgTypeUnknown       MsgType = 0
+	MsgTypeNewView       MsgType = 1
+	MsgTypePrepare       MsgType = 2
+	MsgTypePrepareVote   MsgType = 3
+	MsgTypePreCommit     MsgType = 4
+	MsgTypePreCommitVote MsgType = 5
+	MsgTypeCommit        MsgType = 6
+	MsgTypeCommitVote    MsgType = 7
+	MsgTypeDecide        MsgType = 8
+)
+
+func (m MsgType) String() string {
+	switch m {
+	case MsgTypeNewView:
+		return "NewView"
+	case MsgTypePrepare:
+		return "Prepare"
+	case MsgTypePrepareVote:
+		return "PrepareVote"
+	case MsgTypePreCommit:
+		return "PreCommit"
+	case MsgTypePreCommitVote:
+		return "PreCommitVote"
+	case MsgTypeCommit:
+		return "Commit"
+	case MsgTypeCommitVote:
+		return "CommitVote"
+	case MsgTypeDecide:
+		return "Decide"
+	default:
+		return "Unknown"
+	}
+}
+
+func (m MsgType) Value() uint64 {
+	return uint64(m)
+}
+
+type State uint64
+
+const (
+	StateAcceptRequest State = 1
+	StateHighQC        State = 2
+	StatePrepared      State = 3
+	StatePreCommitted  State = 4
+	StateCommitted     State = 5
+)
+
+func (s State) String() string {
+	if s == StateAcceptRequest {
+		return "StateAcceptRequest"
+	} else if s == StateHighQC {
+		return "StateHighQC"
+	} else if s == StatePrepared {
+		return "StatePrepared"
+	} else if s == StatePreCommitted {
+		return "StatePreCommitted"
+	} else if s == StateCommitted {
+		return "Committed"
+	} else {
+		return "Unknown"
+	}
+}
+
+// Cmp compares s and y and returns:
+//   -1 if s is the previous state of y
+//    0 if s and y are the same state
+//   +1 if s is the next state of y
+func (s State) Cmp(y State) int {
+	if uint64(s) < uint64(y) {
+		return -1
+	}
+	if uint64(s) > uint64(y) {
+		return 1
+	}
+	return 0
+}
 
 // Proposal supports retrieving height and serialized block to be used during HotStuff consensus.
 // It is the interface that abstracts different message structure. (consensus/hotstuff/core/core.go)
@@ -37,17 +108,17 @@ type Proposal interface {
 	// Hash retrieves the hash of this proposal.
 	Hash() common.Hash
 
+	ParentHash() common.Hash
+
 	Coinbase() common.Address
 
 	Time() uint64
 
+	Copy() *types.Block
+
 	EncodeRLP(w io.Writer) error
 
 	DecodeRLP(s *rlp.Stream) error
-}
-
-type Request struct {
-	Proposal Proposal
 }
 
 // View includes a round number and a block height number.
@@ -55,10 +126,23 @@ type Request struct {
 //
 // If the given block is not accepted by validators, a round change will occur
 // and the validators start a new round with round+1.
-//
 type View struct {
 	Round  *big.Int
 	Height *big.Int
+}
+
+func (v *View) HeightU64() uint64 {
+	if v.Height == nil {
+		return 0
+	}
+	return v.Height.Uint64()
+}
+
+func (v *View) RoundU64() uint64 {
+	if v.Round == nil {
+		return 0
+	}
+	return v.Round.Uint64()
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
@@ -68,15 +152,15 @@ func (v *View) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (v *View) DecodeRLP(s *rlp.Stream) error {
-	var view struct {
+	var data struct {
 		Round  *big.Int
 		Height *big.Int
 	}
 
-	if err := s.Decode(&view); err != nil {
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	v.Round, v.Height = view.Round, view.Height
+	v.Round, v.Height = data.Round, data.Height
 	return nil
 }
 
@@ -104,10 +188,56 @@ func (v *View) Sub(y *View) (int64, int64) {
 	return h, r
 }
 
+type TreeNode struct {
+	hash common.Hash
+
+	Parent common.Hash  // Parent TreeTreeNode hash
+	Block  *types.Block // Command to agree on
+}
+
+func NewTreeNode(parent common.Hash, block *types.Block) *TreeNode {
+	TreeNode := &TreeNode{
+		Parent: parent,
+		Block:  block,
+	}
+	TreeNode.Hash()
+	return TreeNode
+}
+
+func (n *TreeNode) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{n.Parent, n.Block})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (n *TreeNode) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Parent common.Hash
+		Block  *types.Block
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	n.Parent, n.Block = data.Parent, data.Block
+	return nil
+}
+
+func (n *TreeNode) Hash() common.Hash {
+	if n.hash == EmptyHash {
+		n.hash = RLPHash([]common.Hash{n.Parent, n.Block.Hash()})
+	}
+	return n.hash
+}
+
+func (n *TreeNode) String() string {
+	return fmt.Sprintf("{TreeNode: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
+}
+
 type QuorumCert struct {
 	View         *View
 	Code         MsgType
-	Hash         common.Hash // block header sig hash
+	TreeNode     common.Hash // block header sig hash
 	Proposer     common.Address
 	BLSSignature []byte
 }
@@ -115,26 +245,47 @@ type QuorumCert struct {
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
 	code := qc.Code.Value()
-	return rlp.Encode(w, []interface{}{qc.View, code, qc.Hash, qc.Proposer, qc.BLSSignature})
+	return rlp.Encode(w, []interface{}{qc.View, code, qc.TreeNode, qc.Proposer, qc.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
-	var cert struct {
+	var data struct {
 		View         *View
-		Code         uint64
-		Hash         common.Hash
+		Code         MsgType
+		TreeNode     common.Hash
 		Proposer     common.Address
 		BLSSignature []byte
 	}
 
-	if err := s.Decode(&cert); err != nil {
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	code := MsgTypeConvertHandler(cert.Code)
-	qc.View, qc.Code, qc.Hash, qc.Proposer, qc.BLSSignature = cert.View, code, cert.Hash, cert.Proposer, cert.BLSSignature
+	qc.View, qc.Code, qc.TreeNode, qc.Proposer, qc.BLSSignature = data.View, data.Code, data.TreeNode, data.Proposer, data.BLSSignature
 	return nil
+}
+
+func (qc *QuorumCert) Height() *big.Int {
+	if qc.View == nil {
+		return common.Big0
+	}
+	return qc.View.Height
+}
+
+func (qc *QuorumCert) HeightU64() uint64 {
+	return qc.Height().Uint64()
+}
+
+func (qc *QuorumCert) Round() *big.Int {
+	if qc.View == nil {
+		return common.Big0
+	}
+	return qc.View.Round
+}
+
+func (qc *QuorumCert) RoundU64() uint64 {
+	return qc.Round().Uint64()
 }
 
 func (qc *QuorumCert) String() string {
@@ -153,24 +304,15 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 	return newQC
 }
 
-type MsgType interface {
-	String() string
-	Value() uint64
-}
-
-type MsgTypeConvert func(data interface{}) MsgType
-
-var MsgTypeConvertHandler MsgTypeConvert
-
-func RegisterMsgTypeConvertHandler(handler MsgTypeConvert) {
-	MsgTypeConvertHandler = handler
-}
-
 type Message struct {
-	Code         MsgType
-	View         *View
-	Msg          []byte
-	Address      common.Address
+	hash common.Hash // Hash of Code, View, Msg
+
+	Address common.Address
+
+	Code MsgType
+	View *View
+	Msg  []byte
+
 	Signature    []byte // Used for ECDSA signature
 	BLSSignature []byte // BLS: Used for either partial sig or thresholded sig
 }
@@ -181,12 +323,12 @@ type Message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.BLSSignature})
+	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
-	var msg struct {
+	var data struct {
 		Code         uint64
 		View         *View
 		Msg          []byte
@@ -195,12 +337,11 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 		BLSSignature []byte
 	}
 
-	if err := s.Decode(&msg); err != nil {
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	code := MsgTypeConvertHandler(msg.Code)
-	m.Code, m.View, m.Msg, m.Address, m.Signature, m.BLSSignature = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.BLSSignature
+	m.Code, m.View, m.Msg, m.Address, m.Signature = MsgType(data.Code), data.View, data.Msg, data.Address, data.Signature
 	return nil
 }
 
@@ -208,27 +349,30 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 //
 // define the functions that needs to be provided for core.
 
-func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
+func (m *Message) FromPayload(payload []byte, validateFn func(common.Hash, []byte) (common.Address, error)) error {
 	// Decode Message
-	err := rlp.DecodeBytes(b, &m)
-	if err != nil {
+	var err error
+
+	if err = rlp.DecodeBytes(payload, &m); err != nil {
 		return err
 	}
 
-	// Validate Message (on a Message without Signature)
-	if validateFn != nil {
-		var payload []byte
-		payload, err = m.PayloadNoSig()
-		if err != nil {
-			return err
-		}
+	// Check for nil fields
+	if m.View == nil || m.Address == EmptyAddress || m.Msg == nil {
+		return errInvalidMessage
+	}
 
-		signerAdd, err := validateFn(payload, m.Signature)
+	// Validate unsigned Message
+	if _, err := m.PayloadNoSig(); err != nil {
+		return err
+	}
+	if validateFn != nil {
+		signer, err := validateFn(m.hash, m.Signature)
 		if err != nil {
 			return err
 		}
-		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
-			return errors.New("Message not signed by the sender")
+		if !bytes.Equal(signer.Bytes(), m.Address.Bytes()) {
+			return errInvalidSigner
 		}
 	}
 	return nil
@@ -238,34 +382,54 @@ func (m *Message) Payload() ([]byte, error) {
 	return rlp.EncodeToBytes(m)
 }
 
-func (m *Message) PayloadNoAddrNoAggNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&Message{
-		Code:         m.Code,
-		View:         m.View,
-		Msg:          m.Msg,
-		Address:      common.Address{},
-		Signature:    []byte{},
-		BLSSignature: []byte{},
-	})
-}
-
 func (m *Message) PayloadNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&Message{
+	data, err := rlp.EncodeToBytes(&Message{
+		Address:      common.Address{},
 		Code:         m.Code,
 		View:         m.View,
 		Msg:          m.Msg,
-		Address:      m.Address,
 		Signature:    []byte{},
 		BLSSignature: []byte{},
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	m.hash = crypto.Keccak256Hash(data)
+	return data, nil
 }
 
 func (m *Message) Decode(val interface{}) error {
 	return rlp.DecodeBytes(m.Msg, val)
 }
 
+func (m *Message) Hash() (common.Hash, error) {
+	if m.hash != EmptyHash {
+		return m.hash, nil
+	}
+	if _, err := m.PayloadNoSig(); err != nil {
+		return EmptyHash, err
+	}
+	return m.hash, nil
+}
+
+func (m *Message) Copy() *Message {
+	view := &View{
+		Height: new(big.Int).SetUint64(m.View.HeightU64()),
+		Round:  new(big.Int).SetUint64(m.View.RoundU64()),
+	}
+	msg := make([]byte, len(m.Msg))
+	copy(msg[:], m.Msg[:])
+
+	return &Message{
+		Code: m.Code,
+		View: view,
+		Msg:  msg,
+	}
+}
+
 func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s, Signature: %x, BLSSignature: %x}", m.Code.String(), m.Address.Hex(), m.Signature, m.BLSSignature)
+	return fmt.Sprintf("{MsgType: %s, Address: %s, View: %v}", m.Code.String(), m.Address.Hex(), m.View)
 }
 
 func RLPHash(v interface{}) (h common.Hash) {
