@@ -275,8 +275,6 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	// [TODO] Verify validators in extraData. Validators in snapshot and extraData should be the same.
-
 	// Resolve auth key and check against signers
 	if _, err := s.signer.Recover(header); err != nil {
 		return err

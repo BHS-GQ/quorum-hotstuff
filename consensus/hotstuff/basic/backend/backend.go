@@ -280,40 +280,6 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, err
 }
 
-func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
-	// Check if the proposal is a valid block
-	block := &types.Block{}
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
-	}
-
-	// check bad block
-	if s.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
-	}
-
-	// check block body
-	txnHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
-	uncleHash := types.CalcUncleHash(block.Uncles())
-	if txnHash != block.Header().TxHash {
-		return 0, errMismatchTxhashes
-	}
-	if uncleHash != nilUncleHash {
-		return 0, errInvalidUncleHash
-	}
-
-	// verify the header of proposed block
-	if err := s.VerifyHeader(s.chain, block.Header(), false); err == nil {
-		return 0, nil
-	} else if err == consensus.ErrFutureBlock {
-		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
-	} else {
-		return 0, err
-	}
-}
-
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	if s.currentBlock == nil {
 		return nil, common.Address{}

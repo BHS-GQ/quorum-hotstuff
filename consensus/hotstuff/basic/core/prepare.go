@@ -86,10 +86,11 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		return err
 	}
 
-	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
+	if _, err := c.backend.Verify(msg.Proposal); err != nil {
 		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
 		return errVerifyUnsealedProposal
 	}
+
 	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
 		logger.Trace("Failed to check extend", "msg", msgTyp, "err", err)
 		return errExtend

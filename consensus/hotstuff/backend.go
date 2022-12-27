@@ -55,10 +55,6 @@ type Backend interface {
 	// the time difference of the proposal and current time is also returned.
 	Verify(Proposal) (time.Duration, error)
 
-	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
-	// the time difference of the proposal and current time is also returned.
-	VerifyUnsealedProposal(Proposal) (time.Duration, error)
-
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (Proposal, common.Address)
 
