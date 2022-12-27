@@ -316,10 +316,6 @@ type Message struct {
 	Signature []byte // Used for ECDSA signature
 }
 
-// ==============================================
-//
-// define the functions that needs to be provided for rlp Encoder/Decoder.
-
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *Message) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature})
@@ -342,10 +338,6 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	m.Code, m.View, m.Msg, m.Address, m.Signature = MsgType(data.Code), data.View, data.Msg, data.Address, data.Signature
 	return nil
 }
-
-// ==============================================
-//
-// define the functions that needs to be provided for core.
 
 func (m *Message) FromPayload(payload []byte, validateFn func(common.Hash, []byte) (common.Address, error)) error {
 	// Decode Message
@@ -427,6 +419,46 @@ func (m *Message) Copy() *Message {
 
 func (m *Message) String() string {
 	return fmt.Sprintf("{MsgType: %s, Address: %s, View: %v}", m.Code.String(), m.Address.Hex(), m.View)
+}
+
+type Vote struct {
+	Code   MsgType
+	View   *View
+	Digest common.Hash // Hash of Proposal/Block
+
+	BLSSignature []byte
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (b *Vote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{b.Code, b.View, b.Digest, b.BLSSignature})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (b *Vote) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Code   MsgType
+		View   *View
+		Digest common.Hash
+
+		BLSSignature []byte
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	b.Code, b.View, b.Digest, b.BLSSignature = data.Code, data.View, data.Digest, data.BLSSignature
+	return nil
+}
+
+func (b *Vote) String() string {
+	return fmt.Sprintf("{Code: %v, View: %v, Digest: %v}", b.Code.String(), b.View, b.Digest.String())
+}
+
+type timeoutEvent struct{}
+type backlogEvent struct {
+	src Validator
+	msg *Message
 }
 
 func RLPHash(v interface{}) (h common.Hash) {
