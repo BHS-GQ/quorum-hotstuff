@@ -421,24 +421,24 @@ func (m *Message) String() string {
 }
 
 type Vote struct {
-	Code   MsgType
-	View   *View
-	Digest common.Hash // Hash of Proposal/Block
+	Code     MsgType
+	View     *View
+	TreeNode common.Hash // Hash of Proposal/Block
 
 	BLSSignature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.Code, b.View, b.Digest, b.BLSSignature})
+	return rlp.Encode(w, []interface{}{b.Code, b.View, b.TreeNode, b.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Code   MsgType
-		View   *View
-		Digest common.Hash
+		Code     MsgType
+		View     *View
+		TreeNode common.Hash
 
 		BLSSignature []byte
 	}
@@ -446,12 +446,12 @@ func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	b.Code, b.View, b.Digest, b.BLSSignature = data.Code, data.View, data.Digest, data.BLSSignature
+	b.Code, b.View, b.TreeNode, b.BLSSignature = data.Code, data.View, data.TreeNode, data.BLSSignature
 	return nil
 }
 
 func (b *Vote) String() string {
-	return fmt.Sprintf("{Code: %v, View: %v, Digest: %v}", b.Code.String(), b.View, b.Digest.String())
+	return fmt.Sprintf("{Code: %v, View: %v, TreeNode: %v}", b.Code.String(), b.View, b.TreeNode.String())
 }
 
 type PackagedQC struct {
