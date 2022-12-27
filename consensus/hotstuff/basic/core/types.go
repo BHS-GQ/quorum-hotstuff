@@ -211,18 +211,20 @@ func (m *MsgPreCommit) String() string {
 }
 
 type Vote struct {
+	Code   hotstuff.MsgType
 	View   *hotstuff.View
-	Digest common.Hash // Digest of s.Announce.Proposal.Hash()
+	Digest common.Hash // Hash of Proposal/Block
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+	return rlp.Encode(w, []interface{}{b.Code, b.View, b.Digest})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
+		Code   MsgType
 		View   *hotstuff.View
 		Digest common.Hash
 	}
@@ -230,12 +232,12 @@ func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-	b.View, b.Digest = subject.View, subject.Digest
+	b.Code, b.View, b.Digest = subject.Code, subject.View, subject.Digest
 	return nil
 }
 
 func (b *Vote) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
+	return fmt.Sprintf("{Code: %v, View: %v, Digest: %v}", b.Code.String(), b.View, b.Digest.String())
 }
 
 type timeoutEvent struct{}

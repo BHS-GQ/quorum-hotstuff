@@ -36,6 +36,8 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
+	"go.dedis.ch/kyber/v3/share"
 )
 
 const (
@@ -76,12 +78,22 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
+func New(
+	config *hotstuff.Config,
+	privateKey *ecdsa.PrivateKey,
+	db ethdb.Database,
+	valset hotstuff.ValidatorSet,
+	suite *bn256.Suite,
+	blsPubPoly *share.PubPoly,
+	blsPrivKey *share.PriShare,
+) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
+	t, n := valset.Q(), valset.Size()
+
+	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote), suite, blsPubPoly, blsPrivKey, t, n)
 	backend := &backend{
 		config:         config,
 		db:             db,
@@ -96,6 +108,9 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recents:        recents,
 		proposals:      make(map[common.Address]bool),
 	}
+
+	backend.logger.Debug("PubPoly", "res", blsPubPoly)
+	backend.logger.Debug("PrivKey", "res", blsPrivKey)
 
 	backend.core = hsc.New(backend, config, signer, valset)
 	return backend
@@ -201,28 +216,6 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 		}
 	}
 	return nil
-}
-
-// PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	// Check if the proposal is a valid block
-	block := &types.Block{}
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return nil, errInvalidProposal
-	}
-
-	h := block.Header()
-	// Append seals into extra-data
-	if err := s.signer.SealAfterCommit(h, seals); err != nil {
-		return nil, err
-	}
-
-	// update block's header
-	block = block.WithSeal(h)
-
-	return block, nil
 }
 
 func (s *backend) Commit(proposal hotstuff.Proposal) error {

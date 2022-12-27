@@ -1,6 +1,8 @@
 package core
 
 import (
+	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -51,24 +53,33 @@ func (c *core) checkPreCommittedQC(qc *hotstuff.QuorumCert) error {
 	if qc == nil {
 		return fmt.Errorf("external pre-committed qc is nil")
 	}
-	if c.current.PreCommittedQC() == nil {
-		return fmt.Errorf("current pre-committed qc is nil")
+	localQC := c.current.PreCommittedQC()
+	if localQC == nil {
+		return fmt.Errorf("current prepare qc is nil")
 	}
-	if !reflect.DeepEqual(c.current.PreCommittedQC(), qc) {
-		return fmt.Errorf("expect %s, got %s", c.current.PreCommittedQC().String(), qc.String())
+
+	if localQC.View.Cmp(qc.View) != 0 {
+		return fmt.Errorf("view unsame, expect %v, got %v", localQC.View, qc.View)
+	}
+	if localQC.Proposer != qc.Proposer {
+		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer, qc.Proposer)
+	}
+	if localQC.Hash != qc.Hash {
+		return fmt.Errorf("expect %v, got %v", localQC.Hash, qc.Hash)
 	}
 	return nil
 }
 
 func (c *core) checkVote(vote *Vote) error {
+	currentVote := c.current.Vote(MsgType(vote.Code.Value()))
 	if vote == nil {
 		return fmt.Errorf("external vote is nil")
 	}
-	if c.current.Vote() == nil {
+	if currentVote == nil {
 		return fmt.Errorf("current vote is nil")
 	}
-	if !reflect.DeepEqual(c.current.Vote(), vote) {
-		return fmt.Errorf("expect %s, got %s", c.current.Vote().String(), vote.String())
+	if !reflect.DeepEqual(currentVote, vote) {
+		return fmt.Errorf("expect %s, got %s", currentVote.String(), vote.String())
 	}
 	return nil
 }
@@ -122,18 +133,22 @@ func (c *core) checkView(msgCode hotstuff.MsgType, view *hotstuff.View) error {
 func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	var err error
 
-	// Add sender address
-	msg.Address = c.Address()
-	msg.View = c.currentView()
-
 	// Add proof of consensus
-	proposal := c.current.Proposal()
-	if msg.Code == MsgTypePrepareVote && proposal != nil {
-		seal, err := c.signer.SignVote(proposal)
+	switch msg.Code {
+	case MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
+		// Sign PAYLOAD
+		// Payload is usually a vote e
+		msg.BLSSignature, err = c.signer.BLSSign(msg.Msg)
 		if err != nil {
 			return nil, err
 		}
-		msg.CommittedSeal = seal
+
+	case MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
+		// Add Threshold Signature as proof
+		// MsgTypePreCommit re-signing is redundant; find way to get from block
+
+	default:
+
 	}
 
 	// Sign Message
@@ -155,19 +170,15 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	return payload, nil
 }
 
-func (c *core) getMessageSeals(n int) [][]byte {
-	seals := make([][]byte, n)
-	for i, data := range c.current.PrepareVotes() {
-		if i < n {
-			seals[i] = data.CommittedSeal
-		}
-	}
-	return seals
-}
-
-func (c *core) broadcast(msg *hotstuff.Message) {
+func (c *core) broadcast(code MsgType, payload []byte) {
 	logger := c.logger.New("state", c.currentState())
 
+	msg := &hotstuff.Message{
+		Address: c.Address(),
+		View:    c.currentView(),
+		Code:    code,
+		Msg:     payload,
+	}
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
 		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
@@ -201,12 +212,78 @@ func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *hotstuff.QuorumCer
 	block := proposal.(*types.Block)
 	h := block.Header()
 	qc := new(hotstuff.QuorumCert)
+	qc.Code = MsgTypeNewView
 	qc.View = &hotstuff.View{
 		Height: block.Number(),
 		Round:  round,
 	}
 	qc.Hash = h.Hash()
 	qc.Proposer = h.Coinbase
-	qc.Extra = h.Extra
+	qc.BLSSignature = []byte{}
 	return qc
+}
+
+// assemble messages to quorum cert.
+func (c *core) messages2qc(code MsgType) (*hotstuff.QuorumCert, error) {
+	var msgs []*hotstuff.Message
+	switch code {
+	case MsgTypePrepareVote:
+		msgs = c.current.PrepareVotes()
+	case MsgTypePreCommitVote:
+		msgs = c.current.PreCommitVotes()
+	case MsgTypeCommitVote:
+		msgs = c.current.CommitVotes()
+	default:
+		return nil, fmt.Errorf("Invalid code")
+	}
+	if len(msgs) == 0 {
+		return nil, fmt.Errorf("assemble qc: not enough message")
+	}
+
+	// Get signatures from votes
+	sigShares := make([][]byte, 0)
+	view := c.currentView()
+	proposalHash := c.current.proposal.Hash()
+	expectedVote := &Vote{
+		Code:   code,
+		View:   view,
+		Digest: proposalHash, // Instead of sending entire proposal, use hash
+	}
+	expectedVoteBytes, err := Encode(expectedVote)
+	c.logger.Trace("Expected vote", "vote", expectedVote, "byte", hex.EncodeToString(expectedVoteBytes))
+	if err != nil {
+		return nil, err
+	}
+
+	for _, msg := range msgs {
+		var vote Vote
+		// checking might not be needed, already done at handle...()
+		msg.Decode(&vote)
+		c.logger.Trace("Checking vote", "vote", vote, "byte", hex.EncodeToString(msg.Msg), "msgAddr", msg.Address)
+		if !bytes.Equal(expectedVoteBytes, msg.Msg) {
+			c.logger.Trace("SOMETHING WRONG")
+			return nil, fmt.Errorf("Vote bytes not equal!")
+		}
+		sigShares = append(sigShares, msg.BLSSignature)
+	}
+
+	aggSig, err := c.signer.BLSRecoverAggSig(expectedVoteBytes, sigShares)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build QC
+	c.logger.Trace("Building QC")
+	block := c.current.Proposal().(*types.Block) // Be careful of pointers
+	h := block.Header()
+
+	qc := new(hotstuff.QuorumCert)
+	qc.View = expectedVote.View // might err
+	qc.Code = expectedVote.Code
+	qc.Hash = expectedVote.Digest
+	qc.Proposer = h.Coinbase
+	qc.BLSSignature = aggSig
+	// [TODO] Decide if h.Extra is needed!
+
+	return qc, nil
 }

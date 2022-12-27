@@ -14,9 +14,8 @@ func Encode(validators []common.Address) (string, error) {
 	vanity = append(vanity, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)...)
 
 	ist := &types.HotstuffExtra{
-		Validators:    validators,
-		Seal:          make([]byte, types.HotstuffExtraSeal),
-		CommittedSeal: [][]byte{},
+		Validators: validators,
+		Seal:       make([]byte, types.HotstuffExtraSeal),
 	}
 
 	payload, err := rlp.EncodeToBytes(&ist)

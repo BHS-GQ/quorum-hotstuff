@@ -105,35 +105,40 @@ func (v *View) Sub(y *View) (int64, int64) {
 }
 
 type QuorumCert struct {
-	View     *View
-	Hash     common.Hash // block header sig hash
-	Proposer common.Address
-	Extra    []byte
+	View         *View
+	Code         MsgType
+	Hash         common.Hash // block header sig hash
+	Proposer     common.Address
+	BLSSignature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.View, qc.Hash, qc.Proposer, qc.Extra})
+	code := qc.Code.Value()
+	return rlp.Encode(w, []interface{}{qc.View, code, qc.Hash, qc.Proposer, qc.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	var cert struct {
-		View     *View
-		Hash     common.Hash
-		Proposer common.Address
-		Extra    []byte
+		View         *View
+		Code         uint64
+		Hash         common.Hash
+		Proposer     common.Address
+		BLSSignature []byte
 	}
 
 	if err := s.Decode(&cert); err != nil {
 		return err
 	}
-	qc.View, qc.Hash, qc.Proposer, qc.Extra = cert.View, cert.Hash, cert.Proposer, cert.Extra
+
+	code := MsgTypeConvertHandler(cert.Code)
+	qc.View, qc.Code, qc.Hash, qc.Proposer, qc.BLSSignature = cert.View, code, cert.Hash, cert.Proposer, cert.BLSSignature
 	return nil
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert View: %v, Hash: %v, Proposer: %v}", qc.View, qc.Hash.String(), qc.Proposer.Hex())
+	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.Hash.String(), qc.Proposer.Hex())
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {
@@ -162,12 +167,12 @@ func RegisterMsgTypeConvertHandler(handler MsgTypeConvert) {
 }
 
 type Message struct {
-	Code          MsgType
-	View          *View
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
+	Code         MsgType
+	View         *View
+	Msg          []byte
+	Address      common.Address
+	Signature    []byte // Used for ECDSA signature
+	BLSSignature []byte // BLS: Used for either partial sig or thresholded sig
 }
 
 // ==============================================
@@ -176,18 +181,18 @@ type Message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Code          uint64
-		View          *View
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
+		Code         uint64
+		View         *View
+		Msg          []byte
+		Address      common.Address
+		Signature    []byte
+		BLSSignature []byte
 	}
 
 	if err := s.Decode(&msg); err != nil {
@@ -195,7 +200,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	}
 
 	code := MsgTypeConvertHandler(msg.Code)
-	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Code, m.View, m.Msg, m.Address, m.Signature, m.BLSSignature = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.BLSSignature
 	return nil
 }
 
@@ -233,13 +238,25 @@ func (m *Message) Payload() ([]byte, error) {
 	return rlp.EncodeToBytes(m)
 }
 
+func (m *Message) PayloadNoAddrNoAggNoSig() ([]byte, error) {
+	return rlp.EncodeToBytes(&Message{
+		Code:         m.Code,
+		View:         m.View,
+		Msg:          m.Msg,
+		Address:      common.Address{},
+		Signature:    []byte{},
+		BLSSignature: []byte{},
+	})
+}
+
 func (m *Message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&Message{
-		Code:      m.Code,
-		View:      m.View,
-		Msg:       m.Msg,
-		Address:   m.Address,
-		Signature: []byte{},
+		Code:         m.Code,
+		View:         m.View,
+		Msg:          m.Msg,
+		Address:      m.Address,
+		Signature:    []byte{},
+		BLSSignature: []byte{},
 	})
 }
 
@@ -248,7 +265,7 @@ func (m *Message) Decode(val interface{}) error {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
+	return fmt.Sprintf("{MsgType: %s, Address: %s, Signature: %x, BLSSignature: %x}", m.Code.String(), m.Address.Hex(), m.Signature, m.BLSSignature)
 }
 
 func RLPHash(v interface{}) (h common.Hash) {

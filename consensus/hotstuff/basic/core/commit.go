@@ -31,34 +31,42 @@ func (c *core) handlePreCommitVote(data *hotstuff.Message, src hotstuff.Validato
 		logger.Trace("Failed to check proposal", "type", msgTyp, "err", err)
 		return err
 	}
-
-	if err := c.current.AddPreCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
-		return errAddPreCommitVote
+	if data.Address != c.Address() {
+		if err := c.current.AddPreCommitVote(data); err != nil {
+			logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
+			return errAddPreCommitVote
+		}
 	}
 
 	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
-		c.lockQCAndProposal(c.current.PrepareQC())
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "msgSize", size)
-		c.sendCommit()
+		lockQC, err := c.messages2qc(msgTyp)
+		if err != nil {
+			logger.Trace("Failed to assemble lockQC", "msg", msgTyp, "err", err)
+			return err
+		}
+		c.lockQCAndProposal(lockQC)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp, "src", src.Address(), "hash", lockQC.Hash, "msgSize", size)
+
+		c.sendCommit(lockQC)
 	}
 	return nil
 }
 
-func (c *core) sendCommit() {
+func (c *core) sendCommit(lockQC *hotstuff.QuorumCert) {
 	logger := c.newLogger()
 
 	msgTyp := MsgTypeCommit
-	sub := c.current.PreCommittedQC()
-	payload, err := Encode(sub)
+
+	payload, err := Encode(lockQC)
+
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendCommit", "msg view", sub.View, "proposal", sub.Hash)
+	c.broadcast(msgTyp, payload)
+	logger.Trace("sendCommit", "msg view", lockQC.View, "proposal", lockQC.Hash)
 }
 
 func (c *core) handleCommit(data *hotstuff.Message, src hotstuff.Validator) error {
@@ -84,7 +92,8 @@ func (c *core) handleCommit(data *hotstuff.Message, src hotstuff.Validator) erro
 		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
+
+	if err := c.signer.VerifyQC(msg); err != nil {
 		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
 		return err
 	}
@@ -112,7 +121,7 @@ func (c *core) sendCommitVote() {
 	logger := c.newLogger()
 
 	msgTyp := MsgTypeCommitVote
-	vote := c.current.Vote()
+	vote := c.current.Vote(msgTyp)
 	if vote == nil {
 		logger.Error("Failed to send vote", "msg", msgTyp, "err", "current vote is nil")
 		return
@@ -122,6 +131,6 @@ func (c *core) sendCommitVote() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(msgTyp, payload)
 	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
 }

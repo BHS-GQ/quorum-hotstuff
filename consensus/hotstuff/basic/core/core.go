@@ -20,9 +20,10 @@ type core struct {
 	backend hotstuff.Backend
 	signer  hotstuff.Signer
 
-	valSet   hotstuff.ValidatorSet
-	requests *requestSet
-	backlogs *backlog
+	valSet      hotstuff.ValidatorSet
+	requests    *requestSet
+	backlogs    *backlog
+	expectedMsg []byte
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription
@@ -131,7 +132,8 @@ catchup:
 
 	// calculate new proposal and init round state
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
-	prepareQC := proposal2QC(lastProposal, common.Big0)
+	prepareQC := proposal2QC(lastProposal, common.Big0) // Do we need this? can't we just use c.current.PrepareQC().Copy()
+
 	c.current = newRoundState(newView, c.valSet, prepareQC)
 	if changeView && lastProposalLocked && lastLockedProposal != nil {
 		c.current.SetProposal(lastLockedProposal)

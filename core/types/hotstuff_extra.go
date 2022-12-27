@@ -17,22 +17,24 @@ var (
 	HotstuffExtraSeal   = 65 // Fixed number of extra-data bytes reserved for validator seal
 
 	// ErrInvalidHotstuffHeaderExtra is returned if the length of extra-data is less than 32 bytes
-	ErrInvalidHotstuffHeaderExtra = errors.New("invalid istanbul header extra-data")
+	ErrInvalidHotstuffHeaderExtra = errors.New("invalid hotstuff header extra-data")
 )
 
 type HotstuffExtra struct {
-	Validators    []common.Address
-	Seal          []byte
-	CommittedSeal [][]byte
-	Salt          []byte
+	Validators []common.Address
+
+	BLSSignature []byte
+
+	Seal []byte
+	Salt []byte
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,
+		ist.BLSSignature,
 		ist.Seal,
-		ist.CommittedSeal,
 		ist.Salt,
 	})
 }
@@ -40,15 +42,15 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
-		Validators    []common.Address
-		Seal          []byte
-		CommittedSeal [][]byte
-		Salt          []byte
+		Validators   []common.Address
+		BLSSignature []byte
+		Seal         []byte
+		Salt         []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
+	ist.Validators, ist.Seal, ist.BLSSignature, ist.Salt = extra.Validators, extra.Seal, extra.BLSSignature, extra.Salt
 	return nil
 }
 
@@ -85,7 +87,6 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	if !keepSeal {
 		extra.Seal = []byte{}
 	}
-	extra.CommittedSeal = [][]byte{}
 	extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)

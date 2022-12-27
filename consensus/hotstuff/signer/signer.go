@@ -3,14 +3,19 @@ package signer
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	lru "github.com/hashicorp/golang-lru"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
+	"go.dedis.ch/kyber/v3/share"
+	"go.dedis.ch/kyber/v3/sign/bls"
+	"go.dedis.ch/kyber/v3/sign/tbls"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -18,47 +23,87 @@ const (
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 )
 
-type SignerImpl struct {
+type HotstuffSigner struct {
 	address       common.Address
 	privateKey    *ecdsa.PrivateKey
 	signatures    *lru.ARCCache // Signatures of recent blocks to speed up mining
 	commitSigSalt byte          //
+
+	logger log.Logger
+
+	// BLS Upgrade - aggregated signature
+	suite      *bn256.Suite // From config
+	blsPubPoly *share.PubPoly
+	blsPrivKey *share.PriShare
+	t          int
+	n          int
+	// /BLS Upgrade
 }
 
-func NewSigner(privateKey *ecdsa.PrivateKey, commitMsgType byte) hotstuff.Signer {
+func NewSigner(
+	privateKey *ecdsa.PrivateKey,
+	commitMsgType byte,
+	suite *bn256.Suite,
+	blsPubPoly *share.PubPoly,
+	blsPrivKey *share.PriShare,
+	t, n int,
+) hotstuff.Signer {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
-	return &SignerImpl{
+	return &HotstuffSigner{
 		address:       address,
 		privateKey:    privateKey,
 		signatures:    signatures,
 		commitSigSalt: commitMsgType,
+		suite:         suite,
+		logger:        log.New(),
+		blsPubPoly:    blsPubPoly,
+		blsPrivKey:    blsPrivKey,
+		t:             t,
+		n:             n,
 	}
 }
 
-func (s *SignerImpl) Address() common.Address {
+func (s *HotstuffSigner) Address() common.Address {
 	return s.address
 }
 
-func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
+// BLS section
+func (s *HotstuffSigner) BLSSign(data []byte) ([]byte, error) {
+	signed_data, err := tbls.Sign(s.suite, s.blsPrivKey, data)
+	if err != nil {
+		return nil, err
+	}
+	return signed_data, nil
+}
+
+func (s *HotstuffSigner) BLSRecoverAggSig(data []byte, sigShares [][]byte) ([]byte, error) {
+	aggSig, err := tbls.Recover(s.suite, s.blsPubPoly, data, sigShares, s.t, s.n)
+	if err != nil {
+		return nil, err
+	}
+	return aggSig, nil
+}
+
+func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
+	err := bls.Verify(s.suite, s.blsPubPoly.Commit(), data, aggSig)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// VVV Not BLS related section VVV
+
+func (s *HotstuffSigner) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256(data)
 	return crypto.Sign(hashData, s.privateKey)
 }
 
-func (s *SignerImpl) SignVote(proposal hotstuff.Proposal) ([]byte, error) {
-	hash := proposal.Hash()
-	voteHash := s.wrapCommittedSeal(hash)
-	return s.Sign(voteHash)
-}
-
-// SigHash returns the hash which is used as input for the Hotstuff
-// signing. It is the hash of the entire header apart from the 65 byte signature
-// contained at the end of the extra data.
-//
 // Note, the method requires the extra data to be at least 65 bytes, otherwise it
 // panics. This is done to avoid accidentally using both forms (signature present
 // or not), which could be abused to produce different hashes for the same header.
-func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
+func (s *HotstuffSigner) SealHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 
 	// Clean seal is required for calculating proposer seal.
@@ -68,7 +113,7 @@ func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
 }
 
 // Recover extracts the proposer address from a signed header.
-func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
+func (s *HotstuffSigner) Recover(header *types.Header) (common.Address, error) {
 	hash := header.Hash()
 	if s.signatures != nil {
 		if addr, ok := s.signatures.Get(hash); ok {
@@ -82,7 +127,7 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
 		return common.Address{}, errInvalidExtraDataFormat
 	}
 
-	payload := s.SigHash(header).Bytes()
+	payload := s.SealHash(header).Bytes()
 	addr, err := getSignatureAddress(payload, extra.Seal)
 	if err != nil {
 		return addr, err
@@ -94,36 +139,10 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
 	return addr, nil
 }
 
-func (s *SignerImpl) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
-	var (
-		buf  bytes.Buffer
-		vals = valSet.AddressList()
-	)
-
-	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
-	if len(header.Extra) < types.HotstuffExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity-len(header.Extra))...)
-	}
-	buf.Write(header.Extra[:types.HotstuffExtraVanity])
-
-	ist := &types.HotstuffExtra{
-		Validators:    vals,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(buf.Bytes(), payload...), nil
-}
-
 // SignerSeal proposer sign the header hash and fill extra seal with signature.
-func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
-	sigHash := s.SigHash(h)
-	seal, err := s.Sign(sigHash.Bytes())
+func (s *HotstuffSigner) SealBeforeCommit(h *types.Header) error {
+	sealHash := s.SealHash(h)
+	seal, err := s.Sign(sealHash.Bytes())
 	if err != nil {
 		return errInvalidSignature
 	}
@@ -145,141 +164,8 @@ func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
 	return nil
 }
 
-// SealAfterCommit writes the extra-data field of a block header with given committed seals.
-func (s *SignerImpl) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
-	if len(committedSeals) == 0 {
-		return errInvalidCommittedSeals
-	}
-
-	for _, seal := range committedSeals {
-		if len(seal) != types.HotstuffExtraSeal {
-			return errInvalidCommittedSeals
-		}
-	}
-
-	extra, err := types.ExtractHotstuffExtra(h)
-	if err != nil {
-		return err
-	}
-
-	extra.CommittedSeal = make([][]byte, len(committedSeals))
-	copy(extra.CommittedSeal, committedSeals)
-
-	payload, err := rlp.EncodeToBytes(&extra)
-	if err != nil {
-		return err
-	}
-
-	h.Extra = append(h.Extra[:types.HotstuffExtraVanity], payload...)
-	return nil
-}
-
-func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.ValidatorSet, seal bool) error {
-	// Verifying the genesis block is not supported
-	number := header.Number.Uint64()
-	if number == 0 {
-		return nil
-	}
-
-	// resolve the authorization key and check against signers
-	signer, err := s.Recover(header)
-	if err != nil {
-		return err
-	}
-	if signer != header.Coinbase {
-		return errInvalidSigner
-	}
-
-	// Signer should be in the validator set of previous block's extraData.
-	if _, v := valSet.GetByAddress(signer); v == nil {
-		return errUnauthorized
-	}
-
-	if seal {
-		extra, err := types.ExtractHotstuffExtra(header)
-		if err != nil {
-			return errInvalidExtraDataFormat
-		}
-		// The length of Committed seals should be larger than 0
-		if len(extra.CommittedSeal) == 0 {
-			return errEmptyCommittedSeals
-		}
-
-		// Check whether the committed seals are generated by parent's validators
-		committers, err := s.GetSignersFromCommittedSeals(header.Hash(), extra.CommittedSeal)
-		if err != nil {
-			return err
-		}
-		return checkValidatorQuorum(committers, valSet)
-	}
-
-	return nil
-}
-
-func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
-	if qc.View.Height.Uint64() == 0 {
-		return nil
-	}
-	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
-	if err != nil {
-		return err
-	}
-
-	// check proposer signature
-	addr, err := getSignatureAddress(qc.Hash.Bytes(), extra.Seal)
-	if err != nil {
-		return err
-	}
-	if addr != qc.Proposer {
-		return errInvalidSigner
-	}
-	if idx, _ := valSet.GetByAddress(addr); idx < 0 {
-		return errInvalidSigner
-	}
-
-	// check committed seals
-	committers, err := s.GetSignersFromCommittedSeals(qc.Hash, extra.CommittedSeal)
-	if err != nil {
-		return err
-	}
-	if err := checkValidatorQuorum(committers, valSet); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *SignerImpl) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
-	if qc.View.Height.Uint64() == 0 {
-		return nil
-	}
-	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
-	if err != nil {
-		return err
-	}
-
-	// check proposer signature
-	proposer, err := getSignatureAddress(qc.Hash.Bytes(), extra.Seal)
-	if err != nil {
-		return err
-	}
-	if signer == qc.Proposer && signer == proposer {
-		return nil
-	}
-
-	// check committed seals
-	committers, err := s.GetSignersFromCommittedSeals(qc.Hash, extra.CommittedSeal)
-	if err != nil {
-		return err
-	}
-	for _, committer := range committers {
-		if signer == committer {
-			return nil
-		}
-	}
-	return fmt.Errorf("address %s is not proposer or committer", signer.Hex())
-}
-
-func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
+// GetSignatureAddress gets the address address from the signature
+func (s *HotstuffSigner) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
 	// 1. Get signature address
 	signer, err := getSignatureAddress(data, sig)
 	if err != nil {
@@ -294,51 +180,31 @@ func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 	return common.Address{}, errUnauthorizedAddress
 }
 
-// wrapCommittedSeal returns a committed seal for the given hash
-func (s *SignerImpl) wrapCommittedSeal(hash common.Hash) []byte {
+func (s *HotstuffSigner) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
 	var (
-		buf bytes.Buffer
+		buf  bytes.Buffer
+		vals = valSet.AddressList()
 	)
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{s.commitSigSalt})
-	return buf.Bytes()
-}
 
-func checkValidatorQuorum(committers []common.Address, valSet hotstuff.ValidatorSet) error {
-	validators := valSet.Copy()
-	validSeal := 0
-	for _, addr := range committers {
-		if validators.RemoveValidator(addr) {
-			validSeal++
-			continue
-		}
-		return errInvalidCommittedSeals
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < types.HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.HotstuffExtraVanity])
+
+	ist := &types.HotstuffExtra{
+		Validators: vals,
+		Seal:       []byte{},
 	}
 
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal <= validators.Q() {
-		return errInvalidCommittedSeals
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	return append(buf.Bytes(), payload...), nil
 }
 
-func (s *SignerImpl) GetSignersFromCommittedSeals(hash common.Hash, seals [][]byte) ([]common.Address, error) {
-	var addrs []common.Address
-	sealHash := s.wrapCommittedSeal(hash)
-
-	// 1. Get committed seals from current header
-	for _, seal := range seals {
-		// 2. Get the original address by seal and parent block hash
-		addr, err := getSignatureAddress(sealHash, seal)
-		if err != nil {
-			return nil, errInvalidSignature
-		}
-		addrs = append(addrs, addr)
-	}
-	return addrs, nil
-}
-
-// GetSignatureAddress gets the address address from the signature
 func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	// 1. Keccak data
 	hashData := crypto.Keccak256(data)
@@ -348,4 +214,21 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func (s *HotstuffSigner) VerifyQC(qc *hotstuff.QuorumCert) error {
+	// skip genesis block
+	if qc.View.Height.Uint64() == 0 {
+		return nil
+	}
+
+	// check proposer signature
+	data, _ := core.Encode(&core.Vote{
+		Code:   qc.Code,
+		View:   qc.View,
+		Digest: qc.Hash,
+	})
+	s.BLSVerifyAggSig(data, qc.BLSSignature)
+
+	return nil
 }

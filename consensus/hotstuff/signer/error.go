@@ -23,4 +23,22 @@ var (
 
 	// errInvalidSigner is returned if the msg is unsigned
 	errInvalidSigner = errors.New("message not signed by the sender")
+
+	// errIncorrectAggInfo is returned if the local agg information is empty
+	errIncorrectAggInfo = errors.New("incorrect agg information")
+
+	// errInsufficientAggPub is returned if there is no enough aggPub being recorded locally
+	errInsufficientAggPub = errors.New("insufficient aggPub")
+
+	// errInvalidAggregatedSign is returned if the aggregated signature is not signed by any of parent validators.
+	errInvalidAggregatedSig = errors.New("invalid aggregated signature")
+
+	// errEmptyAggregatedSign is returned if the field of aggregated signature is zero.
+	errEmptyAggregatedSig = errors.New("zero aggregated signature")
+
+	// errInvalidProposalMyself is returned when a prposal is malformed.
+	errInvalidProposalMyself = errors.New("invalid propsal, comes from myself")
+
+	// errTestIncorrectConversion is returned if the any conversion is incorrect for tests
+	errTestIncorrectConversion = errors.New("incorrect conversion")
 )

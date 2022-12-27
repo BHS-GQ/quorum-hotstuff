@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
+	"go.dedis.ch/kyber/v3/pairing/bn256"
 )
 
 var (
@@ -62,9 +63,8 @@ func appendValidators(genesis *core.Genesis, addrs []common.Address) {
 	genesis.ExtraData = genesis.ExtraData[:types.HotstuffExtraVanity]
 
 	ist := &types.HotstuffExtra{
-		Validators:    addrs,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
+		Validators: addrs,
+		Seal:       []byte{},
 	}
 
 	istPayload, err := rlp.EncodeToBytes(&ist)
@@ -123,7 +123,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB, valset).(*backend)
+	b, _ := New(config, nodeKeys[0], memDB, valset, nil, nil, nil).(*backend)
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)
@@ -233,7 +233,7 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	return arbitraryBlock, arbitraryP2PMessage
 }
 
-var emptySigner = &snr.SignerImpl{}
+var emptySigner = &snr.HotstuffSigner{}
 
 func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
@@ -250,5 +250,5 @@ func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 
 func newTestSigner() hotstuff.Signer {
 	key, _ := generatePrivateKey()
-	return snr.NewSigner(key, 3)
+	return snr.NewSigner(key, 3, bn256.NewSuite(), nil, nil, 0, 0)
 }

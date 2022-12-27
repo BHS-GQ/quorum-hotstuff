@@ -138,11 +138,11 @@ func TestQuorumCertWithSig(t *testing.T) {
 	// 1. Encode test
 	address := common.HexToAddress("0x1234567890")
 	m := &hotstuff.Message{
-		Code:          MsgTypePrepareVote,
-		Msg:           subjectPayload,
-		Address:       address,
-		Signature:     expectedSig,
-		CommittedSeal: []byte{},
+		Code:         MsgTypePrepareVote,
+		Msg:          subjectPayload,
+		Address:      address,
+		Signature:    expectedSig,
+		BLSSignature: []byte{},
 	}
 
 	msgPayload, err := m.Payload()
