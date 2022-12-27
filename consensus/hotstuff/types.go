@@ -313,8 +313,7 @@ type Message struct {
 	View *View
 	Msg  []byte
 
-	Signature    []byte // Used for ECDSA signature
-	BLSSignature []byte // BLS: Used for either partial sig or thresholded sig
+	Signature []byte // Used for ECDSA signature
 }
 
 // ==============================================
@@ -329,12 +328,11 @@ func (m *Message) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Code         uint64
-		View         *View
-		Msg          []byte
-		Address      common.Address
-		Signature    []byte
-		BLSSignature []byte
+		Code      uint64
+		View      *View
+		Msg       []byte
+		Address   common.Address
+		Signature []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
@@ -384,12 +382,11 @@ func (m *Message) Payload() ([]byte, error) {
 
 func (m *Message) PayloadNoSig() ([]byte, error) {
 	data, err := rlp.EncodeToBytes(&Message{
-		Address:      common.Address{},
-		Code:         m.Code,
-		View:         m.View,
-		Msg:          m.Msg,
-		Signature:    []byte{},
-		BLSSignature: []byte{},
+		Address:   common.Address{},
+		Code:      m.Code,
+		View:      m.View,
+		Msg:       m.Msg,
+		Signature: []byte{},
 	})
 	if err != nil {
 		return nil, err
