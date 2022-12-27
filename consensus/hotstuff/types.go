@@ -114,8 +114,6 @@ type Proposal interface {
 
 	Time() uint64
 
-	Copy() *types.Block
-
 	EncodeRLP(w io.Writer) error
 
 	DecodeRLP(s *rlp.Stream) error
@@ -289,7 +287,7 @@ func (qc *QuorumCert) RoundU64() uint64 {
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.Hash.String(), qc.Proposer.Hex())
+	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.TreeNode.String(), qc.Proposer.Hex())
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {
@@ -304,6 +302,7 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 	return newQC
 }
 
+// Wrapper for various payloads
 type Message struct {
 	hash common.Hash // Hash of Code, View, Msg
 
@@ -453,6 +452,32 @@ func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 
 func (b *Vote) String() string {
 	return fmt.Sprintf("{Code: %v, View: %v, Digest: %v}", b.Code.String(), b.View, b.Digest.String())
+}
+
+type PackagedQC struct {
+	Proposal Proposal
+	QC       *QuorumCert // QuorumCert only contains Proposal's hash
+}
+
+func (m *PackagedQC) EncodeRLP(w io.Writer) error {
+	block, ok := m.Proposal.(*types.Block)
+	if !ok {
+		return errInvalidProposal
+	}
+	return rlp.Encode(w, []interface{}{block, m.QC})
+}
+
+func (m *PackagedQC) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Proposal *types.Block
+		QC       *QuorumCert
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Proposal, m.QC = data.Proposal, data.QC
+	return nil
 }
 
 type timeoutEvent struct{}
