@@ -77,7 +77,7 @@ func (s *HotstuffSigner) BLSSign(data []byte) ([]byte, error) {
 }
 
 func (s *HotstuffSigner) BLSRecoverAggSig(data []byte, sigShares [][]byte) ([]byte, error) {
-	aggSig, err := tbls.HeaderRecoverProposer(s.suite, s.blsPubPoly, data, sigShares, s.t, s.n)
+	aggSig, err := tbls.Recover(s.suite, s.blsPubPoly, data, sigShares, s.t, s.n)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hotstuff
 func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	// 1. Keccak data
 	hashData := crypto.Keccak256(data)
-	// 2. HeaderRecoverProposer public key
+	// 2. Recover public key
 	pubkey, err := crypto.SigToPub(hashData, sig)
 	if err != nil {
 		return common.Address{}, err
