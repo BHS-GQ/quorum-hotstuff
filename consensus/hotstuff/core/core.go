@@ -5,20 +5,20 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 )
 
 type core struct {
-	config *hotstuff.Config
+	config *hs.Config
 	logger log.Logger
 
 	current *roundState
-	backend hotstuff.Backend
-	signer  hotstuff.Signer
+	backend hs.Backend
+	signer  hs.Signer
 
-	valSet      hotstuff.ValidatorSet
+	valSet      hs.ValidatorSet
 	requests    *requestSet
 	backlogs    *backlog
 	expectedMsg []byte
@@ -33,7 +33,7 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) CoreEngine {
+func New(backend hs.Backend, config *hs.Config, signer hs.Signer, valSet hs.ValidatorSet) CoreEngine {
 	c := &core{
 		config:   config,
 		backend:  backend,
@@ -83,7 +83,7 @@ func (c *core) startNewRound(round *big.Int) {
 		changeView = true
 	}
 
-	newView := &hotstuff.View{
+	newView := &hs.View{
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
 		Round:  common.Big0,
 	}
@@ -94,8 +94,8 @@ func (c *core) startNewRound(round *big.Int) {
 
 	var (
 		lastProposalLocked bool
-		lastLockedProposal hotstuff.Proposal
-		lastPendingRequest *hotstuff.Request
+		lastLockedProposal hs.Proposal
+		lastPendingRequest *hs.Request
 	)
 	if c.current != nil {
 		lastProposalLocked, lastLockedProposal = c.current.LastLockedProposal()

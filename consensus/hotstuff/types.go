@@ -480,10 +480,8 @@ func (m *PackagedQC) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-type timeoutEvent struct{}
-type backlogEvent struct {
-	src Validator
-	msg *Message
+type Request struct {
+	Block *types.Block
 }
 
 func RLPHash(v interface{}) (h common.Hash) {
@@ -491,4 +489,8 @@ func RLPHash(v interface{}) (h common.Hash) {
 	rlp.Encode(hw, v)
 	hw.Sum(h[:0])
 	return h
+}
+
+func Encode(val interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(val)
 }

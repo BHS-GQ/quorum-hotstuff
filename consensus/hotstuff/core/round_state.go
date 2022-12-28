@@ -5,71 +5,69 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func (c *core) currentView() *hotstuff.View {
-	return &hotstuff.View{
+func (c *core) currentView() *hs.View {
+	return &hs.View{
 		Height: new(big.Int).Set(c.current.Height()),
 		Round:  new(big.Int).Set(c.current.Round()),
 	}
 }
 
-func (c *core) currentState() hotstuff.State {
+func (c *core) currentState() hs.State {
 	return c.current.State()
 }
 
-func (c *core) currentProposer() hotstuff.Validator {
+func (c *core) currentProposer() hs.Validator {
 	return c.valSet.GetProposer()
 }
 
 type roundNode struct {
-	temp *hotstuff.TreeNode // cache node before `prepared`
-	node *hotstuff.TreeNode
+	temp *hs.TreeNode // cache node before `prepared`
+	node *hs.TreeNode
 }
 
 type roundState struct {
 	db     ethdb.Database
 	logger log.Logger
-	vs     hotstuff.ValidatorSet
+	vs     hs.ValidatorSet
 
 	round  *big.Int
 	height *big.Int
-	state  hotstuff.State
+	state  hs.State
 
 	lastChainedBlock *types.Block
-	pendingRequest   *Request
+	pendingRequest   *hs.Request
 	node             *roundNode
 	lockedBlock      *types.Block // validator's prepare proposal
-	executed         *consensus.ExecutedBlock
 	proposalLocked   bool
 
 	// o(4n)
-	newViews       *hotstuff.MessageSet // data set for newView message
-	prepareVotes   *hotstuff.MessageSet // data set for prepareVote message
-	preCommitVotes *hotstuff.MessageSet // data set for preCommitVote message
-	commitVotes    *hotstuff.MessageSet // data set for commitVote message
+	newViews       *MessageSet // data set for newView message
+	prepareVotes   *MessageSet // data set for prepareVote message
+	preCommitVotes *MessageSet // data set for preCommitVote message
+	commitVotes    *MessageSet // data set for commitVote message
 
-	highQC      *hotstuff.QuorumCert // leader highQC
-	prepareQC   *hotstuff.QuorumCert // prepareQC for repo and leader
-	lockQC      *hotstuff.QuorumCert // lockQC for repo and leader
-	committedQC *hotstuff.QuorumCert // committedQC for repo and leader
+	highQC      *hs.QuorumCert // leader highQC
+	prepareQC   *hs.QuorumCert // prepareQC for repo and leader
+	lockQC      *hs.QuorumCert // lockQC for repo and leader
+	committedQC *hs.QuorumCert // committedQC for repo and leader
 }
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *hotstuff.View) *roundState {
+func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hs.ValidatorSet, lastChainedBlock *types.Block, view *hs.View) *roundState {
 	rs := &roundState{
 		db:               db,
 		logger:           logger,
 		vs:               validatorSet.Copy(),
 		round:            view.Round,
 		height:           view.Height,
-		state:            StateAcceptRequest,
+		state:            hs.StateAcceptRequest,
 		node:             new(roundNode),
 		lastChainedBlock: lastChainedBlock,
 		newViews:         NewMessageSet(validatorSet),
@@ -81,7 +79,7 @@ func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hotstuff.V
 }
 
 // clean all votes message set for new round
-func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *hotstuff.View) *roundState {
+func (s *roundState) update(vs hs.ValidatorSet, lastChainedBlock *types.Block, view *hs.View) *roundState {
 	s.vs = vs.Copy()
 	s.height = view.Height
 	s.round = view.Round
@@ -94,8 +92,8 @@ func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Bl
 	return s
 }
 
-func (s *roundState) View() *hotstuff.View {
-	return &hotstuff.View{
+func (s *roundState) View() *hs.View {
+	return &hs.View{
 		Round:  s.round,
 		Height: s.height,
 	}
@@ -117,11 +115,11 @@ func (s *roundState) RoundU64() uint64 {
 	return s.round.Uint64()
 }
 
-func (s *roundState) SetState(state hotstuff.State) {
+func (s *roundState) SetState(state hs.State) {
 	s.state = state
 }
 
-func (s *roundState) State() hotstuff.State {
+func (s *roundState) State() hs.State {
 	return s.state
 }
 
@@ -130,17 +128,17 @@ func (s *roundState) LastChainedBlock() *types.Block {
 }
 
 // accept pending request from miner only for once.
-func (s *roundState) SetPendingRequest(req *Request) {
+func (s *roundState) SetPendingRequest(req *hs.Request) {
 	if s.pendingRequest == nil {
 		s.pendingRequest = req
 	}
 }
 
-func (s *roundState) PendingRequest() *Request {
+func (s *roundState) PendingRequest() *hs.Request {
 	return s.pendingRequest
 }
 
-func (s *roundState) SetNode(node *hotstuff.TreeNode) error {
+func (s *roundState) SetTreeNode(node *hs.TreeNode) error {
 	if node == nil || node.Block == nil {
 		return errInvalidNode
 	}
@@ -158,7 +156,7 @@ func (s *roundState) SetNode(node *hotstuff.TreeNode) error {
 	return nil
 }
 
-func (s *roundState) Node() *hotstuff.TreeNode {
+func (s *roundState) TreeNode() *hs.TreeNode {
 	if temp := s.node.temp; temp != nil {
 		return temp
 	} else {
@@ -166,7 +164,7 @@ func (s *roundState) Node() *hotstuff.TreeNode {
 	}
 }
 
-func (s *roundState) Lock(qc *hotstuff.QuorumCert) error {
+func (s *roundState) Lock(qc *hs.QuorumCert) error {
 	if s.node == nil || s.node.node == nil {
 		return errInvalidNode
 	}
@@ -184,7 +182,7 @@ func (s *roundState) Lock(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (s *roundState) LockQC() *hotstuff.QuorumCert {
+func (s *roundState) LockQC() *hs.QuorumCert {
 	return s.lockQC
 }
 
@@ -194,7 +192,6 @@ func (s *roundState) Unlock() error {
 	s.proposalLocked = false
 	s.lockedBlock = nil
 	s.node.temp = nil
-	s.executed = nil
 	return nil
 }
 
@@ -217,29 +214,27 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 		return err
 	}
 	s.lockedBlock = block
-	if s.executed != nil && s.executed.Block != nil && s.executed.Block.Hash() == block.Hash() {
-		s.executed.Block = block
-	}
+
 	return nil
 }
 
 func (s *roundState) Vote() common.Hash {
-	if node := s.Node(); node == nil {
-		return hotstuff.EmptyHash
+	if node := s.TreeNode(); node == nil {
+		return hs.EmptyHash
 	} else {
 		return node.Hash()
 	}
 }
 
-func (s *roundState) SetHighQC(qc *hotstuff.QuorumCert) {
+func (s *roundState) SetHighQC(qc *hs.QuorumCert) {
 	s.highQC = qc
 }
 
-func (s *roundState) HighQC() *hotstuff.QuorumCert {
+func (s *roundState) HighQC() *hs.QuorumCert {
 	return s.highQC
 }
 
-func (s *roundState) SetPrepareQC(qc *hotstuff.QuorumCert) error {
+func (s *roundState) SetPrepareQC(qc *hs.QuorumCert) error {
 	if err := s.storePrepareQC(qc); err != nil {
 		return err
 	}
@@ -247,11 +242,11 @@ func (s *roundState) SetPrepareQC(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (s *roundState) PrepareQC() *hotstuff.QuorumCert {
+func (s *roundState) PrepareQC() *hs.QuorumCert {
 	return s.prepareQC
 }
 
-func (s *roundState) SetCommittedQC(qc *hotstuff.QuorumCert) error {
+func (s *roundState) SetCommittedQC(qc *hs.QuorumCert) error {
 	if err := s.storeCommitQC(qc); err != nil {
 		return err
 	}
@@ -259,7 +254,7 @@ func (s *roundState) SetCommittedQC(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (s *roundState) CommittedQC() *hotstuff.QuorumCert {
+func (s *roundState) CommittedQC() *hs.QuorumCert {
 	return s.committedQC
 }
 
@@ -268,7 +263,7 @@ func (s *roundState) CommittedQC() *hotstuff.QuorumCert {
 // leader collect votes
 //
 // -----------------------------------------------------------------------
-func (s *roundState) AddNewViews(msg *hotstuff.Message) error {
+func (s *roundState) AddNewViews(msg *hs.Message) error {
 	return s.newViews.Add(msg)
 }
 
@@ -276,15 +271,15 @@ func (s *roundState) NewViewSize() int {
 	return s.newViews.Size()
 }
 
-func (s *roundState) NewViews() []*hotstuff.Message {
+func (s *roundState) NewViews() []*hs.Message {
 	return s.newViews.Values()
 }
 
-func (s *roundState) AddPrepareVote(msg *hotstuff.Message) error {
+func (s *roundState) AddPrepareVote(msg *hs.Message) error {
 	return s.prepareVotes.Add(msg)
 }
 
-func (s *roundState) PrepareVotes() []*hotstuff.Message {
+func (s *roundState) PrepareVotes() []*hs.Message {
 	return s.prepareVotes.Values()
 }
 
@@ -292,11 +287,11 @@ func (s *roundState) PrepareVoteSize() int {
 	return s.prepareVotes.Size()
 }
 
-func (s *roundState) AddPreCommitVote(msg *hotstuff.Message) error {
+func (s *roundState) AddPreCommitVote(msg *hs.Message) error {
 	return s.preCommitVotes.Add(msg)
 }
 
-func (s *roundState) PreCommitVotes() []*hotstuff.Message {
+func (s *roundState) PreCommitVotes() []*hs.Message {
 	return s.preCommitVotes.Values()
 }
 
@@ -304,26 +299,16 @@ func (s *roundState) PreCommitVoteSize() int {
 	return s.preCommitVotes.Size()
 }
 
-func (s *roundState) AddCommitVote(msg *hotstuff.Message) error {
+func (s *roundState) AddCommitVote(msg *hs.Message) error {
 	return s.commitVotes.Add(msg)
 }
 
-func (s *roundState) CommitVotes() []*hotstuff.Message {
+func (s *roundState) CommitVotes() []*hs.Message {
 	return s.commitVotes.Values()
 }
 
 func (s *roundState) CommitVoteSize() int {
 	return s.commitVotes.Size()
-}
-
-func (s *roundState) GetCommittedSeals(n int) [][]byte {
-	seals := make([][]byte, n)
-	for i, data := range s.commitVotes.Values() {
-		if i < n {
-			seals[i] = data.CommittedSeal
-		}
-	}
-	return seals
 }
 
 // -----------------------------------------------------------------------
@@ -343,7 +328,7 @@ const (
 )
 
 // todo(fuk): add comments
-func (s *roundState) reload(view *hotstuff.View) {
+func (s *roundState) reload(view *hs.View) {
 	var (
 		err      error
 		printErr = s.logger != nil && s.height.Uint64() > 1
@@ -372,24 +357,24 @@ func (s *roundState) reload(view *hotstuff.View) {
 	}
 }
 
-func (s *roundState) storeView(view *hotstuff.View) error {
+func (s *roundState) storeView(view *hs.View) error {
 	if s.db == nil {
 		return nil
 	}
 
-	raw, err := Encode(view)
+	raw, err := hs.Encode(view)
 	if err != nil {
 		return err
 	}
 	return s.db.Put(viewKey(), raw)
 }
 
-func (s *roundState) loadView(cur *hotstuff.View) error {
+func (s *roundState) loadView(cur *hs.View) error {
 	if s.db == nil {
 		return nil
 	}
 
-	view := new(hotstuff.View)
+	view := new(hs.View)
 	raw, err := s.db.Get(viewKey())
 	if err != nil {
 		return err
@@ -404,12 +389,12 @@ func (s *roundState) loadView(cur *hotstuff.View) error {
 	return nil
 }
 
-func (s *roundState) storePrepareQC(qc *hotstuff.QuorumCert) error {
+func (s *roundState) storePrepareQC(qc *hs.QuorumCert) error {
 	if s.db == nil {
 		return nil
 	}
 
-	raw, err := Encode(qc)
+	raw, err := hs.Encode(qc)
 	if err != nil {
 		return err
 	}
@@ -421,7 +406,7 @@ func (s *roundState) loadPrepareQC() error {
 		return nil
 	}
 
-	data := new(hotstuff.QuorumCert)
+	data := new(hs.QuorumCert)
 	raw, err := s.db.Get(prepareQCKey())
 	if err != nil {
 		return err
@@ -433,12 +418,12 @@ func (s *roundState) loadPrepareQC() error {
 	return nil
 }
 
-func (s *roundState) storeLockQC(qc *hotstuff.QuorumCert) error {
+func (s *roundState) storeLockQC(qc *hs.QuorumCert) error {
 	if s.db == nil {
 		return nil
 	}
 
-	raw, err := Encode(qc)
+	raw, err := hs.Encode(qc)
 	if err != nil {
 		return err
 	}
@@ -450,7 +435,7 @@ func (s *roundState) loadLockQC() error {
 		return nil
 	}
 
-	data := new(hotstuff.QuorumCert)
+	data := new(hs.QuorumCert)
 	raw, err := s.db.Get(lockQCKey())
 	if err != nil {
 		return err
@@ -462,12 +447,12 @@ func (s *roundState) loadLockQC() error {
 	return nil
 }
 
-func (s *roundState) storeCommitQC(qc *hotstuff.QuorumCert) error {
+func (s *roundState) storeCommitQC(qc *hs.QuorumCert) error {
 	if s.db == nil {
 		return nil
 	}
 
-	raw, err := Encode(qc)
+	raw, err := hs.Encode(qc)
 	if err != nil {
 		return err
 	}
@@ -479,7 +464,7 @@ func (s *roundState) loadCommitQC() error {
 		return nil
 	}
 
-	data := new(hotstuff.QuorumCert)
+	data := new(hs.QuorumCert)
 	raw, err := s.db.Get(commitQCKey())
 	if err != nil {
 		return err
@@ -491,12 +476,12 @@ func (s *roundState) loadCommitQC() error {
 	return nil
 }
 
-func (s *roundState) storeNode(node *hotstuff.TreeNode) error {
+func (s *roundState) storeNode(node *hs.TreeNode) error {
 	if s.db == nil {
 		return nil
 	}
 
-	raw, err := Encode(node)
+	raw, err := hs.Encode(node)
 	if err != nil {
 		return err
 	}
@@ -508,7 +493,7 @@ func (s *roundState) loadNode() error {
 		return nil
 	}
 
-	data := new(hotstuff.TreeNode)
+	data := new(hs.TreeNode)
 	raw, err := s.db.Get(nodeKey())
 	if err != nil {
 		return err

@@ -1,11 +1,11 @@
-package signer
+package core
 
 import (
 	"bytes"
 	"crypto/ecdsa"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
@@ -46,7 +46,7 @@ func NewSigner(
 	blsPubPoly *share.PubPoly,
 	blsPrivKey *share.PriShare,
 	t, n int,
-) hotstuff.Signer {
+) hs.Signer {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
 	return &HotstuffSigner{
@@ -155,7 +155,7 @@ func (s *HotstuffSigner) SignerSeal(h *types.Header) error {
 		return err
 	}
 	extra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&extra)
+	payload, err := hs.Encode(&extra)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func (s *HotstuffSigner) SignerSeal(h *types.Header) error {
 }
 
 // GetSignatureAddress gets the address address from the signature
-func (s *HotstuffSigner) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
+func (s *HotstuffSigner) CheckSignature(valSet hs.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
 	// 1. Get signature address
 	signer, err := getSignatureAddress(data, sig)
 	if err != nil {
@@ -179,7 +179,7 @@ func (s *HotstuffSigner) CheckSignature(valSet hotstuff.ValidatorSet, data []byt
 	return common.Address{}, errUnauthorizedAddress
 }
 
-func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hs.ValidatorSet) ([]byte, error) {
 	var (
 		buf  bytes.Buffer
 		vals = valSet.AddressList()
@@ -196,7 +196,7 @@ func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hotstuff
 		Seal:       []byte{},
 	}
 
-	payload, err := rlp.EncodeToBytes(&ist)
+	payload, err := hs.Encode(&ist)
 	if err != nil {
 		return nil, err
 	}
@@ -215,14 +215,14 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func (s *HotstuffSigner) VerifyQC(qc *hotstuff.QuorumCert) error {
+func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
 	// skip genesis block
 	if qc.View.Height.Uint64() == 0 {
 		return nil
 	}
 
 	// check proposer signature
-	data, _ := rlp.EncodeToBytes(&hotstuff.Vote{
+	data, _ := hs.Encode(&hs.Vote{
 		Code:     qc.Code,
 		View:     qc.View,
 		TreeNode: qc.TreeNode,

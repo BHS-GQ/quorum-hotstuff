@@ -18,16 +18,16 @@ package validator
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func New(addr common.Address) hotstuff.Validator {
+func New(addr common.Address) hs.Validator {
 	return &defaultValidator{
 		address: addr,
 	}
 }
 
-func NewSet(addrs []common.Address, policy hotstuff.SelectProposerPolicy) hotstuff.ValidatorSet {
+func NewSet(addrs []common.Address, policy hs.SelectProposerPolicy) hs.ValidatorSet {
 	return newDefaultSet(addrs, policy)
 }
 

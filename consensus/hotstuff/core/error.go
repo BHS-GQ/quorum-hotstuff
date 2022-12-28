@@ -1,4 +1,4 @@
-package hotstuff
+package core
 
 import "errors"
 
@@ -76,4 +76,6 @@ var (
 	errInvalidProposalMyself = errors.New("invalid propsal, comes from myself")
 
 	errTestIncorrectConversion = errors.New("incorrect conversion")
+
+	errInvalidNode = errors.New("invalid node")
 )
