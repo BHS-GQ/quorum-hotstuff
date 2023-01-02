@@ -78,4 +78,8 @@ var (
 	errTestIncorrectConversion = errors.New("incorrect conversion")
 
 	errInvalidNode = errors.New("invalid node")
+
+	errNilHighQC = errors.New("highQC is nil")
+
+	errInvalidRawHash = errors.New("raw hash is invalid")
 )

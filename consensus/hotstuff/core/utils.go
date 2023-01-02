@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -62,6 +63,84 @@ func (c *core) newLogger() log.Logger {
 	return logger
 }
 
+func (c *core) checkMsgDest() error {
+	if !c.IsProposer() {
+		return errNotToProposer
+	}
+	return nil
+}
+
+// verifyQC check and validate qc.
+func (c *core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
+	if qc == nil || qc.View == nil {
+		return fmt.Errorf("qc or qc.View is nil")
+	}
+
+	// skip genesis block
+	if qc.HeightU64() == 0 {
+		return nil
+	}
+
+	// qc fields checking
+	if qc.TreeNode == hs.EmptyHash || qc.Proposer == hs.EmptyAddress || qc.BLSSignature == nil {
+		return fmt.Errorf("qc.TreeNode, Proposer, Seal or BLSSig is nil")
+	}
+
+	// matching code
+	if (data.Code == hs.MsgTypeNewView && qc.Code != hs.MsgTypePrepareVote) ||
+		(data.Code == hs.MsgTypePrepare && qc.Code != hs.MsgTypePrepareVote) ||
+		(data.Code == hs.MsgTypePreCommit && qc.Code != hs.MsgTypePrepareVote) ||
+		(data.Code == hs.MsgTypeCommit && qc.Code != hs.MsgTypePreCommitVote) ||
+		(data.Code == hs.MsgTypeDecide && qc.Code != hs.MsgTypeCommitVote) {
+		return fmt.Errorf("qc.Code %s not matching message code", qc.Code.String())
+	}
+
+	// prepareQC's view should lower than message's view
+	if data.Code == hs.MsgTypeNewView || data.Code == hs.MsgTypePrepare {
+		if hdiff, rdiff := data.View.Sub(qc.View); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
+			return fmt.Errorf("view is invalid")
+		}
+	}
+
+	// // qc.TreeNode is not node hash but block hash, only used for epoch change.
+	// if c.isEpochStartQC(nil, qc) {
+	// 	return c.verifyEpochStartQC(qc)
+	// }
+
+	// matching view and compare proposer and local node
+	if data.Code == hs.MsgTypePreCommit || data.Code == hs.MsgTypeCommit || data.Code == hs.MsgTypeDecide {
+		if qc.View.Cmp(data.View) != 0 {
+			return fmt.Errorf("qc.View %v not matching message view", qc.View)
+		}
+		if qc.Proposer != c.proposer() {
+			return fmt.Errorf("expect proposer %v, got %v", c.proposer(), qc.Proposer)
+		}
+		if node := c.current.TreeNode(); node == nil {
+			return fmt.Errorf("current node is nil")
+		} else if node.Hash() != qc.TreeNode {
+			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.TreeNode)
+		}
+	}
+
+	// resturct msg payload and compare msg.hash with qc.hash
+	msg := hs.NewCleanMessage(qc.View, qc.Code, qc.TreeNode.Bytes())
+	if _, err := msg.PayloadNoSig(); err != nil {
+		return fmt.Errorf("payload no sig")
+	}
+
+	sealHash := qc.SealHash()
+	msgHash, err := msg.Hash()
+	if err != nil {
+		return err
+	}
+	if msgHash != sealHash {
+		return fmt.Errorf("expect qc hash %v, got %v", msgHash, sealHash)
+	}
+
+	// find the correct validator set and verify seal & committed seals
+	return c.signer.VerifyQC(qc)
+}
+
 func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 	qc := &hs.QuorumCert{
 		View: &hs.View{
@@ -91,4 +170,36 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 
 	qc.BLSSignature = extra.BLSSignature
 	return qc, nil
+}
+
+// sendVote repo send kinds of vote to leader, use `current.node` after repo `prepared`.
+func (c *core) sendVote(code hs.MsgType) {
+	logger := c.newLogger()
+
+	// Fetch and sign vote
+	vote := c.current.UnsignedVote(code)
+	if vote == nil {
+		logger.Error("Failed to send vote", "msg", code, "err", "current vote is nil")
+		return
+	}
+	unsignedVoteBytes, err := hs.Encode(vote)
+	if err != nil {
+		logger.Error("Failed to send vote", "msg", code, "err", "could not encode unsigned vote")
+		return
+	}
+	signedVoteBytes, err := c.signer.BLSSign(unsignedVoteBytes)
+	if err != nil {
+		logger.Error("Failed to send vote", "msg", code, "err", "could not sign unsigned vote bytes")
+		return
+	}
+	vote.BLSSignature = signedVoteBytes
+	payload, err := hs.Encode(vote)
+	if err != nil {
+		logger.Error("Failed to encode", "msg", code, "err", err)
+		return
+	}
+
+	c.broadcast(code, payload)
+	prefix := fmt.Sprintf("send%s", code.String())
+	logger.Trace(prefix, "msg", code, "hash", vote)
 }

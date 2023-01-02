@@ -94,9 +94,15 @@ func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 
 // VVV Not BLS related section VVV
 
-func (s *HotstuffSigner) Sign(data []byte) ([]byte, error) {
-	hashData := crypto.Keccak256(data)
-	return crypto.Sign(hashData, s.privateKey)
+func (s *HotstuffSigner) Sign(hash common.Hash) ([]byte, error) {
+	if hash == hs.EmptyHash {
+		return nil, errInvalidRawHash
+	}
+	if s.privateKey == nil {
+		return nil, errInvalidSigner
+	}
+
+	return crypto.Sign(hash.Bytes(), s.privateKey)
 }
 
 // Note, the method requires the extra data to be at least 65 bytes, otherwise it

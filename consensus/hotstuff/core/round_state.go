@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -218,12 +217,23 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 	return nil
 }
 
-func (s *roundState) Vote() common.Hash {
-	if node := s.TreeNode(); node == nil {
-		return hs.EmptyHash
-	} else {
-		return node.Hash()
+func (s *roundState) UnsignedVote(code hs.MsgType) *hs.Vote {
+	node := s.TreeNode()
+	if node == nil || s.node.node.Hash() == hs.EmptyHash {
+		return nil
 	}
+
+	// Build unsigned Vote
+	vote := &hs.Vote{
+		Code: code,
+		View: &hs.View{
+			Round:  new(big.Int).Set(s.round),
+			Height: new(big.Int).Set(s.height),
+		},
+		TreeNode: node.Hash(), // Instead of sending entire block, use hash
+	}
+
+	return vote
 }
 
 func (s *roundState) SetHighQC(qc *hs.QuorumCert) {

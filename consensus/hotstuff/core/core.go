@@ -167,3 +167,7 @@ func (c *core) setCurrentState(s State) {
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return c.signer.CheckSignature(c.valSet, data, sig)
 }
+
+func (c *core) Q() int {
+	return c.valSet.Q()
+}

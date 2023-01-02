@@ -29,7 +29,7 @@ type Signer interface {
 	// Not BLS
 
 	// Sign signs data for ECDSA authetication
-	Sign(data []byte) ([]byte, error)
+	Sign(hash common.Hash) ([]byte, error)
 
 	// SealHash returns block hash before sealing
 	HeaderHash(header *types.Header) (hash common.Hash)

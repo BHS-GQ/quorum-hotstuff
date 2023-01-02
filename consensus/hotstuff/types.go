@@ -240,6 +240,13 @@ type QuorumCert struct {
 	BLSSignature []byte
 }
 
+// Hash retrieve message hash but not proposal hash
+func (qc *QuorumCert) SealHash() common.Hash {
+	msg := NewCleanMessage(qc.View, qc.Code, qc.TreeNode.Bytes())
+	msg.PayloadNoSig() // check if encodable
+	return msg.hash
+}
+
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
 	code := qc.Code.Value()
@@ -313,6 +320,14 @@ type Message struct {
 	Msg  []byte
 
 	Signature []byte // Used for ECDSA signature
+}
+
+func NewCleanMessage(view *View, code MsgType, payload []byte) *Message {
+	return &Message{
+		View: view,
+		Code: code,
+		Msg:  payload,
+	}
 }
 
 // EncodeRLP serializes m into the Ethereum RLP format.
