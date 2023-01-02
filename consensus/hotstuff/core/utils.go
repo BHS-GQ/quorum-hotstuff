@@ -203,3 +203,57 @@ func (c *core) sendVote(code hs.MsgType) {
 	prefix := fmt.Sprintf("send%s", code.String())
 	logger.Trace(prefix, "msg", code, "hash", vote)
 }
+
+func (c *core) checkMsgSource(src common.Address) error {
+	if !c.valSet.IsProposer(src) {
+		return errNotFromProposer
+	}
+	return nil
+}
+
+// checkNode repo compare remote node with local node
+func (c *core) checkNode(node *hs.TreeNode, compare bool) error {
+	if node == nil || node.Parent == hs.EmptyHash ||
+		node.Block == nil || node.Block.Header() == nil {
+		return errInvalidNode
+	}
+
+	if !compare {
+		return nil
+	}
+
+	local := c.current.TreeNode()
+	if local == nil {
+		return fmt.Errorf("current node is nil")
+	}
+	if local.Hash() != node.Hash() {
+		return fmt.Errorf("expect node %v but got %v", local.Hash(), node.Hash())
+	}
+	if local.Block.Hash() != node.Block.Hash() {
+		return fmt.Errorf("expect block %v but got %v", local.Block.Hash(), node.Block.Hash())
+	}
+	return nil
+}
+
+// checkBlock check the extend relationship between remote block and latest chained block.
+// ensure that the remote block equals to locked block if it exist.
+func (c *core) checkBlock(block *types.Block) error {
+	lastChainedBlock := c.current.LastChainedBlock()
+	if lastChainedBlock.NumberU64()+1 != block.NumberU64() {
+		return fmt.Errorf("expect block number %v, got %v", lastChainedBlock.NumberU64()+1, block.NumberU64())
+	}
+	if lastChainedBlock.Hash() != block.ParentHash() {
+		return fmt.Errorf("expect parent hash %v, got %v", lastChainedBlock.Hash(), block.ParentHash())
+	}
+
+	if lockedBlock := c.current.LockedBlock(); lockedBlock != nil {
+		if block.NumberU64() != lockedBlock.NumberU64() {
+			return fmt.Errorf("expect locked block number %v, got %v", lockedBlock.NumberU64(), block.NumberU64())
+		}
+		if block.Hash() != lockedBlock.Hash() {
+			return fmt.Errorf("expect locked block hash %v, got %v", lockedBlock.Hash(), block.Hash())
+		}
+	}
+
+	return nil
+}

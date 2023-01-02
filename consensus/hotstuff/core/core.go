@@ -57,7 +57,7 @@ func (c *core) startNewRound(round *big.Int) {
 		changeView = false
 
 		// Gets recently-chained block using chain reader
-		lastProposal, lastProposer := c.backend.LastProposal()
+		lastProposal, lastProposer := c.backend.LastProposal() // [TODO]
 	)
 
 	// check last chained block

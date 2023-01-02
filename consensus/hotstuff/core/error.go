@@ -82,4 +82,6 @@ var (
 	errNilHighQC = errors.New("highQC is nil")
 
 	errInvalidRawHash = errors.New("raw hash is invalid")
+
+	errInvalidQC = errors.New("invalid qc")
 )
