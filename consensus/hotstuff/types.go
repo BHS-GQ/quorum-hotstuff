@@ -470,29 +470,15 @@ func (b *Vote) String() string {
 }
 
 type PackagedQC struct {
-	Proposal Proposal
+	TreeNode *TreeNode
 	QC       *QuorumCert // QuorumCert only contains Proposal's hash
 }
 
-func (m *PackagedQC) EncodeRLP(w io.Writer) error {
-	block, ok := m.Proposal.(*types.Block)
-	if !ok {
-		return errInvalidProposal
+func NewPackagedQC(node *TreeNode, qc *QuorumCert) *PackagedQC {
+	return &PackagedQC{
+		TreeNode: node,
+		QC:       qc,
 	}
-	return rlp.Encode(w, []interface{}{block, m.QC})
-}
-
-func (m *PackagedQC) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Proposal *types.Block
-		QC       *QuorumCert
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Proposal, m.QC = data.Proposal, data.QC
-	return nil
 }
 
 type Request struct {
