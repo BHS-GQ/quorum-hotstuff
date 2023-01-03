@@ -235,7 +235,7 @@ func (n *TreeNode) String() string {
 type QuorumCert struct {
 	View         *View
 	Code         MsgType
-	TreeNode     common.Hash // block header sig hash
+	TreeNode     common.Hash // TreeNode hash NOT Block hash
 	Proposer     common.Address
 	BLSSignature []byte
 }
@@ -307,6 +307,11 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 		return nil
 	}
 	return newQC
+}
+
+type Diploma struct {
+	CommitQC  *QuorumCert
+	BlockHash common.Hash
 }
 
 // Wrapper for various payloads

@@ -10,6 +10,7 @@ import (
 //	prepareQC ← QC(V )
 //	broadcast Msg(pre-commit, ⊥, prepareQC )
 // ```
+// [NOTE] We follow HotStuff specifications strictly, so whole TreeNode is NOT sent
 func (c *core) handlePrepareVote(data *hs.Message) error {
 
 	var (

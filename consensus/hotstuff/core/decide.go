@@ -1,6 +1,10 @@
 package core
 
 import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -50,33 +54,38 @@ func (c *core) handleCommitVote(data *hs.Message) error {
 
 	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() == hs.StatePreCommitted {
-		// [TODO] Do we need block sealing this early?
+		// // [TODO] Seal block with AggSig; will need type changes
 		// sealedBlock, err := c.backend.SealBlock(lockedBlock)
 		// if err != nil {
 		// 	logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
 		// 	return err
 		// }
+		sealedBlock := lockedBlock // temp
 		commitQC, err := c.messages2qc(code)
 		if err != nil {
 			logger.Trace("Failed to assemble commitQC", "msg", code, "err", err)
 			return err
 		}
-		if err := c.acceptCommitQC(lockedBlock, commitQC); err != nil {
+		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
 			logger.Trace("Failed to accept commitQC")
 		}
 		logger.Trace("acceptCommit", "msg", code, "msgSize", size)
 
-		c.sendDecide(commitQC)
+		c.sendDecide(sealedBlock.Hash(), commitQC)
 	}
 
 	return nil
 }
 
-func (c *core) sendDecide(commitQC *hs.QuorumCert) {
+func (c *core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	logger := c.newLogger()
 
 	code := hs.MsgTypeDecide
-	payload, err := hs.Encode(commitQC)
+	msg := &hs.Diploma{
+		BlockHash: block,
+		CommitQC:  commitQC,
+	}
+	payload, err := hs.Encode(msg)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", code, "err", err)
 		return
@@ -84,6 +93,95 @@ func (c *core) sendDecide(commitQC *hs.QuorumCert) {
 	c.broadcast(code, payload)
 
 	logger.Trace("sendDecide", "msg", code, "node", commitQC.TreeNode)
+}
+
+// handleDecide repo receive MsgDecide and try to commit the final block.
+func (c *core) handleDecide(data *hs.Message) error {
+	var (
+		logger = c.newLogger()
+		code   = data.Code
+		src    = data.Address
+		msg    *hs.Diploma
+	)
+
+	// check message
+	if err := data.Decode(&msg); err != nil {
+		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
+		return errFailedDecodeCommit
+	}
+	if err := c.checkView(data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		return err
+	}
+	if err := c.checkMsgSource(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+		return err
+	}
+
+	// ensure commitQC is legal
+	commitQC := msg.CommitQC
+	if err := c.verifyQC(data, commitQC); err != nil {
+		logger.Trace("Failed to verify commitQC", "msg", code, "src", src, "err", err)
+		return err
+	}
+
+	// ensure the block hash is the correct one
+	// [NOTE] Compared filtered headers! Does not include seal
+	blockHash := msg.BlockHash
+	lockedBlock := c.current.LockedBlock()
+	if lockedBlock == nil {
+		logger.Trace("Locked block is nil", "msg", code, "src", src)
+		return errInvalidBlock
+	} else if blockHash == hs.EmptyHash || lockedBlock.Hash() != blockHash {
+		logger.Trace("Failed to check block hash", "msg", code, "src", src, "expect block", lockedBlock.Hash(), "got", blockHash)
+		return errInvalidBlock
+	}
+
+	if curNode := c.current.TreeNode(); curNode == nil || curNode.Block == nil {
+		logger.Trace("Current node is nil")
+		return errInvalidNode
+	} else if curNode.Hash() != commitQC.TreeNode {
+		logger.Trace("Failed to check commitQC", "expect node", curNode.Hash(), "got", commitQC.TreeNode)
+		return errInvalidQC
+	} else if curNode.Block.Hash() != blockHash {
+		logger.Trace("Failed to check node", "expect node block hash", curNode.Block.Hash(), "got", blockHash)
+		return errInvalidBlock
+	}
+
+	// // [TODO] Seal block with AggSig; will need type changes
+	// if err := c.signer.VerifyCommittedSeal(c.valSet, msg.BlockHash, msg.CommittedSeals); err != nil {
+	// 	logger.Trace("Failed to verify committed seals", "msg", code, "src", src, "err", err)
+	// 	return errInvalidQC
+	// }
+	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.TreeNode)
+
+	// accept commitQC and commit block to miner
+	if c.IsProposer() && c.currentState() == hs.StateCommitted {
+		if err := c.commit(c.current.LockedBlock()); err != nil {
+			logger.Trace("Failed to commit proposal", "msg", code, "err", err)
+			return err
+		}
+	}
+	if !c.IsProposer() && c.currentState() == hs.StatePreCommitted {
+		// // [TODO] Seal block with AggSig; will need type changes
+		// sealedBlock, err := c.backend.SealBlock(lockedBlock)
+		// if err != nil {
+		// 	logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+		// 	return err
+		// }
+		sealedBlock := lockedBlock // temp
+		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
+			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
+			return err
+		}
+		if err := c.commit(sealedBlock); err != nil {
+			logger.Trace("Failed to commit proposal", "err", err)
+			return err
+		}
+	}
+
+	c.startNewRound(common.Big0)
+	return nil
 }
 
 func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert) error {
@@ -95,4 +193,27 @@ func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert)
 	}
 	c.current.SetState(hs.StateCommitted)
 	return nil
+}
+
+func (c *core) commit(sealedBlock *types.Block) error {
+	if lockedBlock := c.current.LockedBlock(); lockedBlock == nil {
+		return fmt.Errorf("locked block is nil")
+	} else if lockedBlock.Hash() != sealedBlock.Hash() {
+		return fmt.Errorf("expect locked block %v, got %v", lockedBlock.Hash(), sealedBlock.Hash())
+	}
+
+	if c.current.executed == nil || c.current.executed.Block == nil || c.current.executed.Block.Hash() != sealedBlock.Hash() {
+		if c.IsProposer() {
+			c.current.executed = &consensus.ExecutedBlock{Block: sealedBlock}
+		} else {
+			executed, err := c.backend.ExecuteBlock(sealedBlock)
+			if err != nil {
+				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
+			}
+			executed.Block = sealedBlock
+			c.current.executed = executed
+		}
+	}
+
+	return c.backend.Commit(c.current.executed)
 }

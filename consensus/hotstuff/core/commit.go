@@ -10,6 +10,7 @@ import (
 //	precommitQC ← QC(V )
 //	broadcast Msg(commit, ⊥, precommitQC )
 // ```
+// [NOTE] We follow HotStuff specifications strictly, so whole TreeNode is NOT sent
 func (c *core) handlePreCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
