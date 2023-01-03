@@ -1,8 +1,10 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -256,4 +258,102 @@ func (c *core) checkBlock(block *types.Block) error {
 	}
 
 	return nil
+}
+
+// checkVote vote should equal to current round state
+func (c *core) checkVote(vote *hs.Vote, code hs.MsgType) error {
+	// [TODO] Can we check if partial signature is valid?
+
+	if vote == nil {
+		return fmt.Errorf("current vote is nil")
+	}
+
+	expectedVote := c.current.UnsignedVote(code)
+	if !reflect.DeepEqual(expectedVote, vote) {
+		return fmt.Errorf("expect %s, got %s", expectedVote, vote)
+	}
+
+	voteBytes, err := hs.Encode(vote.Unsigned())
+	if err != nil {
+		return fmt.Errorf("could not encode vote")
+	}
+	expectedVoteBytes, err := hs.Encode(expectedVote)
+	if err != nil {
+		return fmt.Errorf("could not encode expected vote")
+	}
+
+	// Check encoded version equality
+	if !bytes.Equal(expectedVoteBytes, voteBytes) {
+		return fmt.Errorf("vote does not match expected vote")
+	}
+
+	return nil
+}
+
+// assemble messages to quorum cert.
+func (c *core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
+	var msgs []*hs.Message
+	switch code {
+	case hs.MsgTypePrepareVote:
+		msgs = c.current.PrepareVotes()
+	case hs.MsgTypePreCommitVote:
+		msgs = c.current.PreCommitVotes()
+	case hs.MsgTypeCommitVote:
+		msgs = c.current.CommitVotes()
+	default:
+		return nil, errInvalidCode
+	}
+	if len(msgs) == 0 {
+		return nil, fmt.Errorf("assemble qc: not enough message")
+	}
+
+	// Aggregated signatures from votes
+	// Note that votes were checked in
+	//   their respective handle<State>Vote() functions
+	var (
+		proposer     = c.proposer()
+		view         = c.currentView()
+		expectedVote = c.current.UnsignedVote(code)
+		sigShares    = make([][]byte, 0)
+		signedVote   *hs.Vote
+	)
+
+	expectedVoteBytes, err := hs.Encode(expectedVote)
+	if err != nil {
+		return nil, fmt.Errorf("could not encode expectedVote")
+	}
+
+	qc := &hs.QuorumCert{
+		View:         view,
+		Code:         code,
+		TreeNode:     expectedVote.TreeNode,
+		Proposer:     proposer,
+		BLSSignature: []byte{},
+	}
+
+	// [TODO] Very inefficient; change in a later version
+	for _, msg := range msgs {
+
+		// [TODO] Remove redundant vote-checking
+		msg.Decode(&signedVote)
+		voteBytes, err := hs.Encode(signedVote.Unsigned())
+		if err != nil {
+			return nil, fmt.Errorf("could not encode vote")
+		}
+		if !bytes.Equal(expectedVoteBytes, voteBytes) {
+			return nil, fmt.Errorf("vote from address %s does not match expected vote", msg.Address)
+		}
+
+		// Compile signatures
+		sigShares = append(sigShares, signedVote.BLSSignature)
+	}
+
+	// Get aggregated signature for QC
+	aggSig, err := c.signer.BLSRecoverAggSig(expectedVoteBytes, sigShares)
+	if err != nil {
+		return nil, err
+	}
+	qc.BLSSignature = aggSig
+
+	return qc, nil
 }

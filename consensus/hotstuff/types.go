@@ -469,6 +469,15 @@ func (b *Vote) String() string {
 	return fmt.Sprintf("{Code: %v, View: %v, TreeNode: %v}", b.Code.String(), b.View, b.TreeNode.String())
 }
 
+func (b *Vote) Unsigned() *Vote {
+	return &Vote{
+		Code:         b.Code,
+		View:         b.View,
+		TreeNode:     b.TreeNode,
+		BLSSignature: []byte{},
+	}
+}
+
 type PackagedQC struct {
 	TreeNode *TreeNode
 	QC       *QuorumCert // QuorumCert only contains Proposal's hash

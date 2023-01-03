@@ -147,7 +147,7 @@ func (s *HotstuffSigner) HeaderRecoverProposer(header *types.Header) (common.Add
 // SignerSeal proposer sign the header hash and fill extra seal with signature.
 func (s *HotstuffSigner) SignerSeal(h *types.Header) error {
 	HeaderHash := s.HeaderHash(h)
-	seal, err := s.Sign(HeaderHash.Bytes())
+	seal, err := s.Sign(HeaderHash)
 	if err != nil {
 		return errInvalidSignature
 	}

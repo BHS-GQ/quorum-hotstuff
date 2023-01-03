@@ -236,7 +236,8 @@ func (s *roundState) UnsignedVote(code hs.MsgType) *hs.Vote {
 			Round:  new(big.Int).Set(s.round),
 			Height: new(big.Int).Set(s.height),
 		},
-		TreeNode: node.Hash(), // Instead of sending entire block, use hash
+		TreeNode:     node.Hash(), // Instead of sending entire block, use hash
+		BLSSignature: []byte{},    // Sign later
 	}
 
 	return vote
