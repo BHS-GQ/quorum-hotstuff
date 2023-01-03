@@ -4,12 +4,11 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
 // Start implements core.Engine.Start
-func (c *core) Start(chain consensus.ChainReader) {
+func (c *core) Start() error {
 	c.isRunning = true
 	c.current = nil
 
@@ -18,13 +17,17 @@ func (c *core) Start(chain consensus.ChainReader) {
 
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
+
+	return nil
 }
 
 // Stop implements core.Engine.Stop
-func (c *core) Stop() {
+func (c *core) Stop() error {
 	c.stopTimer()
 	c.unsubscribeEvents()
 	c.isRunning = false
+
+	return nil
 }
 
 func (c *core) Address() common.Address {

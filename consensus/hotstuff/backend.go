@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -54,9 +53,9 @@ type Backend interface {
 }
 
 type CoreEngine interface {
-	Start(chain consensus.ChainReader)
+	Start() error
 
-	Stop()
+	Stop() error
 
 	// IsProposer return true if self address equal leader/proposer address in current round/height
 	IsProposer() bool

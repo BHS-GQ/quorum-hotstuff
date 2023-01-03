@@ -29,7 +29,7 @@ var (
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
-	return s.signer.Recover(header)
+	return s.signer.HeaderRecoverProposer(header)
 }
 
 func (s *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
@@ -81,7 +81,7 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 
 	// add validators in snapshot to extraData's validators section
 	valset := s.snap()
-	extra, err := s.signer.PrepareExtra(header, valset)
+	extra, err := s.signer.BuildPrepareExtra(header, valset)
 	if err != nil {
 		return err
 	}
@@ -116,8 +116,8 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	number := header.Number.Uint64()
-	// Bail out if we're unauthorized to sign a block
 
+	// Bail out if we're unauthorized to sign a block
 	snap := s.snap()
 	if _, v := snap.GetByAddress(s.Address()); v == nil {
 		return errUnauthorized
@@ -128,8 +128,8 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return consensus.ErrUnknownAncestor
 	}
 
-	// sign the sig hash and fill extra seal
-	if err = s.signer.SealBeforeCommit(header); err != nil {
+	// Sign the HotstuffExtra.Seal portion with ECDSA
+	if err = s.signer.SignerSeal(header); err != nil {
 		return err
 	}
 	block = block.WithSeal(header)
@@ -146,7 +146,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		}()
 		// post block into HotStuff engine
 		go s.EventMux().Post(hotstuff.RequestEvent{
-			Proposal: block,
+			Block: block,
 		})
 		for {
 			select {
@@ -167,7 +167,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 }
 
 func (s *backend) SealHash(header *types.Header) common.Hash {
-	return s.signer.SealHash(header)
+	return s.signer.HeaderHash(header)
 }
 
 // useless
@@ -278,7 +278,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	// [TODO] Verify validators in extraData. Validators in snapshot and extraData should be the same.
 
 	// Resolve auth key and check against signers
-	if _, err := s.signer.Recover(header); err != nil {
+	if _, err := s.signer.HeaderRecoverProposer(header); err != nil {
 		return err
 	}
 

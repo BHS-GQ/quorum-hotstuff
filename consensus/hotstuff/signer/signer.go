@@ -156,16 +156,10 @@ func (s *HotstuffSigner) SignerSeal(h *types.Header) error {
 		return errInvalidSignature
 	}
 
-	extra, err := types.ExtractHotstuffExtra(h)
-	if err != nil {
+	if err := h.SetSeal(seal); err != nil {
 		return err
 	}
-	extra.Seal = seal
-	payload, err := hs.Encode(&extra)
-	if err != nil {
-		return err
-	}
-	h.Extra = append(h.Extra[:types.HotstuffExtraVanity], payload...)
+
 	return nil
 }
 
@@ -197,6 +191,7 @@ func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hs.Valid
 	}
 	buf.Write(header.Extra[:types.HotstuffExtraVanity])
 
+	// [TODO] Consider explicitly adding other fields
 	ist := &types.HotstuffExtra{
 		Validators: vals,
 		Seal:       []byte{},
