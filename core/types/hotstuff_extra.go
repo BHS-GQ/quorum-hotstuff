@@ -74,6 +74,34 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 	return hotstuffExtra, nil
 }
 
+func (h *Header) SetSeal(seal []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
+	return nil
+}
+
+func (h *Header) SetBLSSignature(sig []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.BLSSignature = sig
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
+	return nil
+}
+
 // HotstuffFilteredHeader returns a filtered header which some information (like seal, committed seals)
 // are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.

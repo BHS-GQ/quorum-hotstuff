@@ -92,40 +92,32 @@ func (c *core) startNewRound(round *big.Int) {
 		newView.Round = new(big.Int).Set(round)
 	}
 
-	var (
-		lastProposalLocked bool
-		lastLockedProposal hs.Proposal
-		lastPendingRequest *hs.Request
-	)
-	if c.current != nil {
-		lastProposalLocked, lastLockedProposal = c.current.LastLockedProposal()
-		lastPendingRequest = c.current.PendingRequest()
-	}
-
 	// calculate new proposal and init round state
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	prepareQC := proposal2QC(lastProposal, common.Big0) // Do we need this? can't we just use c.current.PrepareQC().Copy()
 
-	if err := updateRoundState(lastProposal, newView); err != nil {
+	// update smr and try to unlock at the round0
+	if err := c.updateRoundState(lastProposal, newView); err != nil {
 		logger.Error("Update round state failed", "state", c.currentState(), "newView", newView, "err", err)
 		return
 	}
-	if changeView && lastProposalLocked && lastLockedProposal != nil {
-		c.current.SetProposal(lastLockedProposal)
-		c.current.LockProposal()
-	}
-	if changeView && lastPendingRequest != nil {
-		c.current.SetPendingRequest(lastPendingRequest)
+	if !changeView {
+		if err := c.current.Unlock(); err != nil {
+			logger.Error("Unlock node failed", "newView", newView, "err", err)
+			return
+		}
 	}
 
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
-	// process pending request
-	c.setCurrentState(StateAcceptRequest)
-	c.sendNewView(newView)
-
 	// stop last timer and regenerate new timer
 	c.newRoundChangeTimer()
+
+	// process pending request
+	c.setCurrentState(StateAcceptRequest)
+	// start new round from message of `newView`
+	c.sendNewView()
+
 }
 
 func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error {
@@ -149,11 +141,10 @@ func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error 
 	if err := c.current.SetPrepareQC(qc); err != nil {
 		return err
 	}
-	// clear old `prepareQC` and `commitQC`
-	c.current.prepareQC = nil
-	c.current.committedQC = nil
 
-	// note that `lockQC` is not cleared
+	// clear old `lockQC` and `commitQC`
+	c.current.lockQC = nil
+	c.current.committedQC = nil
 
 	c.logger.Trace("EpochStartPrepareQC settled!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", qc.node, "qc.view", qc.view, "qc.proposer", qc.proposer)
 	return nil

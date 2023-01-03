@@ -158,7 +158,7 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 		qc.TreeNode = lastBlock.Hash()
 	}
 
-	// [TODO] Add Aggregated BLSSignature before committing during signer sealing
+	// Get AggSig of PrepareQC from lastBlock header
 	extra, err := types.ExtractHotstuffExtra(lastBlock.Header())
 	if err != nil {
 		return nil, err

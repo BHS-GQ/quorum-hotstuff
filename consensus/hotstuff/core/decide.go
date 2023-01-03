@@ -54,13 +54,12 @@ func (c *core) handleCommitVote(data *hs.Message) error {
 
 	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() == hs.StatePreCommitted {
-		// // [TODO] Seal block with AggSig; will need type changes
-		// sealedBlock, err := c.backend.SealBlock(lockedBlock)
-		// if err != nil {
-		// 	logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
-		// 	return err
-		// }
-		sealedBlock := lockedBlock // temp
+		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
+		sealedBlock, err := c.backend.SealBlock(lockedBlock)
+		if err != nil {
+			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+			return err
+		}
 		commitQC, err := c.messages2qc(code)
 		if err != nil {
 			logger.Trace("Failed to assemble commitQC", "msg", code, "err", err)
@@ -148,9 +147,9 @@ func (c *core) handleDecide(data *hs.Message) error {
 		return errInvalidBlock
 	}
 
-	// // [TODO] Seal block with AggSig; will need type changes
-	// if err := c.signer.VerifyCommittedSeal(c.valSet, msg.BlockHash, msg.CommittedSeals); err != nil {
-	// 	logger.Trace("Failed to verify committed seals", "msg", code, "src", src, "err", err)
+	// // [TODO] Seal block with BLS Aggregated Sig of PrepareQC
+	// if err := c.signer.VerifyBlockBLSSig(); err != nil {
+	// 	logger.Trace("Failed to verify aggsig'd block", "msg", code, "src", src, "err", err)
 	// 	return errInvalidQC
 	// }
 	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.TreeNode)
@@ -163,13 +162,12 @@ func (c *core) handleDecide(data *hs.Message) error {
 		}
 	}
 	if !c.IsProposer() && c.currentState() == hs.StatePreCommitted {
-		// // [TODO] Seal block with AggSig; will need type changes
-		// sealedBlock, err := c.backend.SealBlock(lockedBlock)
-		// if err != nil {
-		// 	logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
-		// 	return err
-		// }
-		sealedBlock := lockedBlock // temp
+		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
+		sealedBlock, err := c.backend.SealBlock(lockedBlock)
+		if err != nil {
+			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+			return err
+		}
 		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
 			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
 			return err
@@ -206,7 +204,7 @@ func (c *core) commit(sealedBlock *types.Block) error {
 		if c.IsProposer() {
 			c.current.executed = &consensus.ExecutedBlock{Block: sealedBlock}
 		} else {
-			executed, err := c.backend.ExecuteBlock(sealedBlock)
+			executed, err := c.backend.ExecuteBlock(sealedBlock) // [TODO]
 			if err != nil {
 				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
 			}
@@ -215,5 +213,5 @@ func (c *core) commit(sealedBlock *types.Block) error {
 		}
 	}
 
-	return c.backend.Commit(c.current.executed)
+	return c.backend.Commit(c.current.executed) // [TODO]
 }
