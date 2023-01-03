@@ -1,7 +1,6 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -87,15 +86,15 @@ func (c *core) processPendingRequests() {
 		// Push back if it's a future message
 		if err := c.checkRequestMsg(r); err != nil {
 			if err == errFutureMessage {
-				c.logger.Trace("Stop processing request", "number", r.block.Number(), "hash", r.block.Hash())
+				c.logger.Trace("Stop processing request", "number", r.Block.Number(), "hash", r.Block.Hash())
 				c.pendingRequests.Push(m, prio)
 				break
 			}
-			c.logger.Trace("Skip the pending request", "number", r.block.Number(), "hash", r.block.Hash(), "err", err)
+			c.logger.Trace("Skip the pending request", "number", r.Block.Number(), "hash", r.Block.Hash(), "err", err)
 			continue
 		} else {
-			c.logger.Trace("Post pending request", "number", r.block.Number(), "hash", r.block.Hash())
-			go c.sendEvent(hotstuff.RequestEvent{
+			c.logger.Trace("Post pending request", "number", r.Block.Number(), "hash", r.Block.Hash())
+			go c.sendEvent(hs.RequestEvent{
 				Block: r.Block,
 			})
 		}
