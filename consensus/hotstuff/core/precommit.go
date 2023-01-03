@@ -28,7 +28,7 @@ func (c *core) handlePrepareVote(data *hs.Message) error {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkVote(vote, hs.MsgTypePreCommitVote); err != nil {
+	if err := c.checkVote(vote, hs.MsgTypePrepareVote); err != nil {
 		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
 		return err
 	}
