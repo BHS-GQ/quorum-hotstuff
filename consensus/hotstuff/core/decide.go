@@ -215,3 +215,16 @@ func (c *core) commit(sealedBlock *types.Block) error {
 
 	return c.backend.Commit(c.current.executed) // [TODO]
 }
+
+// handleFinalCommitted start new round if consensus engine accept notify signal from miner.worker.
+// signals should be related with sync header or body. in fact, we DONT need this function to start an new round,
+// because that the function `startNewRound` will sync header to preparing new consensus round args.
+// we just kept it here for backup.
+func (c *core) handleFinalCommitted(header *types.Header) error {
+	logger := c.newLogger()
+	if height := header.Number.Uint64(); height >= c.current.HeightU64() {
+		logger.Trace("handleFinalCommitted", "height", height)
+		c.startNewRound(common.Big0)
+	}
+	return nil
+}

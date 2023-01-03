@@ -55,11 +55,6 @@ func (c *core) checkView(view *hs.View) error {
 	}
 }
 
-// sendEvent sends events to mux
-func (c *core) sendEvent(ev interface{}) {
-	c.backend.EventMux().Post(ev)
-}
-
 func (c *core) newLogger() log.Logger {
 	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
 	return logger
@@ -353,4 +348,8 @@ func (c *core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
 	qc.BLSSignature = aggSig
 
 	return qc, nil
+}
+
+func (c *core) Q() int {
+	return c.valSet.Q()
 }

@@ -84,4 +84,6 @@ var (
 	errInvalidRawHash = errors.New("raw hash is invalid")
 
 	errInvalidQC = errors.New("invalid qc")
+
+	errFailedDecodeMessage = errors.New("message payload invalid")
 )

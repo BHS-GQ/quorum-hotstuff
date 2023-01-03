@@ -358,7 +358,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (m *Message) FromPayload(payload []byte, validateFn func(common.Hash, []byte) (common.Address, error)) error {
+func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
 	// Decode Message
 	var err error
 
@@ -376,7 +376,7 @@ func (m *Message) FromPayload(payload []byte, validateFn func(common.Hash, []byt
 		return err
 	}
 	if validateFn != nil {
-		signer, err := validateFn(m.hash, m.Signature)
+		signer, err := validateFn(m.hash.Bytes(), m.Signature)
 		if err != nil {
 			return err
 		}
@@ -384,6 +384,8 @@ func (m *Message) FromPayload(payload []byte, validateFn func(common.Hash, []byt
 			return errInvalidSigner
 		}
 	}
+
+	m.Address = src
 	return nil
 }
 

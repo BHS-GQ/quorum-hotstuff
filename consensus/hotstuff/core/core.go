@@ -29,7 +29,11 @@ type core struct {
 
 	roundChangeTimer *time.Timer
 
+	pendingRequests   *prque.Prque
+	pendingRequestsMu *sync.Mutex
+
 	validateFn func([]byte, []byte) (common.Address, error)
+	isRunning    bool
 }
 
 // New creates an HotStuff consensus core
@@ -52,6 +56,11 @@ const maxRetry uint64 = 10
 
 func (c *core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
+
+	if !c.isRunning {
+		logger.Trace("Start engine first")
+		return
+	}
 
 	var (
 		changeView = false
@@ -114,7 +123,7 @@ func (c *core) startNewRound(round *big.Int) {
 	c.newRoundChangeTimer()
 
 	// process pending request
-	c.setCurrentState(StateAcceptRequest)
+	c.setCurrentState(hs.StateAcceptRequest)
 	// start new round from message of `newView`
 	c.sendNewView()
 
@@ -150,15 +159,15 @@ func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error 
 	return nil
 }
 
+// setCurrentState handle backlog message after round state settled.
 func (c *core) setCurrentState(s State) {
 	c.current.SetState(s)
+	if s == StateAcceptRequest || s == StateHighQC {
+		c.processPendingRequests()
+	}
 	c.processBacklog()
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return c.signer.CheckSignature(c.valSet, data, sig)
-}
-
-func (c *core) Q() int {
-	return c.valSet.Q()
 }
