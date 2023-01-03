@@ -41,8 +41,9 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hs.Backend, config *hs.Config, signer hs.Signer, valSet hs.ValidatorSet) *core {
+func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Database, valSet hs.ValidatorSet) *core {
 	c := &core{
+		db:                db,
 		config:            config,
 		backend:           backend,
 		valSet:            valSet,

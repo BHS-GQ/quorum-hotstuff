@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -46,11 +47,35 @@ type Backend interface {
 	// GetProposer returns the proposer of the given block height
 	GetProposer(number uint64) common.Address
 
-	// ParentValidators returns the validator set of the given proposal's parent block
-	ParentValidators(block *types.Block) ValidatorSet
-
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
 
 	Close() error
 }
+
+type CoreEngine interface {
+	Start(chain consensus.ChainReader)
+
+	Stop()
+
+	// IsProposer return true if self address equal leader/proposer address in current round/height
+	IsProposer() bool
+
+	// CurrentSequence return current proposal height and consensus round
+	CurrentSequence() (uint64, uint64)
+
+	// verify if a hash is the same as the proposed block in the current pending request
+	//
+	// this is useful when the engine is currently the speaker
+	//
+	// pending request is populated right at the request stage so this would give us the earliest verification
+	// to avoid any race condition of coming propagated blocks
+	IsCurrentProposal(blockHash common.Hash) bool
+}
+
+type HotstuffProtocol string
+
+const (
+	HOTSTUFF_PROTOCOL_BASIC        HotstuffProtocol = "basic"
+	HOTSTUFF_PROTOCOL_EVENT_DRIVEN HotstuffProtocol = "event_driven"
+)
