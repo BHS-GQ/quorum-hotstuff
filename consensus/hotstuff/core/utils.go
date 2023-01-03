@@ -104,11 +104,6 @@ func (c *core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 		}
 	}
 
-	// // qc.TreeNode is not node hash but block hash, only used for epoch change.
-	// if c.isEpochStartQC(nil, qc) {
-	// 	return c.verifyEpochStartQC(qc)
-	// }
-
 	// matching view and compare proposer and local node
 	if data.Code == hs.MsgTypePreCommit || data.Code == hs.MsgTypeCommit || data.Code == hs.MsgTypeDecide {
 		if qc.View.Cmp(data.View) != 0 {
@@ -130,6 +125,8 @@ func (c *core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 		return fmt.Errorf("payload no sig")
 	}
 
+	// Check if msg built from qc has similar hash
+	// [TODO] Is this necessary?
 	sealHash := qc.SealHash()
 	msgHash, err := msg.Hash()
 	if err != nil {

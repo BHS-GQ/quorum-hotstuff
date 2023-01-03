@@ -78,6 +78,58 @@ func (c *core) sendPreCommit(prepareQC *hs.QuorumCert) {
 	logger.Trace("sendPreCommit", "msg", code, "node", prepareQC.TreeNode)
 }
 
+// handlePreCommit implement description as follow:
+// ```
+//  repo wait for message m : matchingQC(m.justify, prepare, curView) from leader(curView)
+//	prepareQC ← m.justify
+//	send voteMsg(pre-commit, m.justify.node, ⊥) to leader(curView)
+// ```
+func (c *core) handlePreCommit(data *hs.Message) error {
+	var (
+		logger    = c.newLogger()
+		code      = data.Code
+		src       = data.Address
+		prepareQC *hs.QuorumCert
+	)
+
+	// check message
+	if err := data.Decode(&prepareQC); err != nil {
+		logger.Trace("Failed to check decode", "msg", code, "src", src, "err", err)
+		return errFailedDecodePreCommit
+	}
+	if err := c.checkView(data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		return err
+	}
+	if err := c.checkMsgSource(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+		return err
+	}
+
+	// ensure `prepareQC` is legal
+	if err := c.verifyQC(data, prepareQC); err != nil {
+		logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
+		return err
+	}
+
+	logger.Trace("handlePreCommit", "msg", code, "src", src, "prepareQC", prepareQC.TreeNode)
+
+	// accept msg info and state
+	if c.IsProposer() && c.currentState() == hs.StatePrepared {
+		c.sendVote(hs.MsgTypePreCommitVote)
+	}
+	if !c.IsProposer() && c.currentState() == hs.StateHighQC {
+		if err := c.acceptPrepareQC(prepareQC); err != nil {
+			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
+			return err
+		}
+		logger.Trace("acceptPrepareQC", "msg", code, "prepareQC", prepareQC.TreeNode)
+		c.sendVote(hs.MsgTypePreCommitVote)
+	}
+
+	return nil
+}
+
 func (c *core) acceptPrepareQC(prepareQC *hs.QuorumCert) error {
 	if err := c.current.SetTreeNode(c.current.TreeNode()); err != nil {
 		return err
