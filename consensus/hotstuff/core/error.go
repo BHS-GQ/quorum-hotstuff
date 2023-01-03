@@ -86,4 +86,8 @@ var (
 	errInvalidQC = errors.New("invalid qc")
 
 	errFailedDecodeMessage = errors.New("message payload invalid")
+
+	errInvalidCode = errors.New("message type invalid")
+
+	errInvalidBlock = errors.New("invalid block")
 )

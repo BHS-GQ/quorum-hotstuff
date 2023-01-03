@@ -24,6 +24,14 @@ func (c *core) HeightU64() uint64 {
 	}
 }
 
+func (c *core) RoundU64() uint64 {
+	if c.current == nil {
+		return 0
+	} else {
+		return c.current.RoundU64()
+	}
+}
+
 // checkView checks the Message sequence remote msg view should not be nil(local view WONT be nil).
 // if the view is ahead of current view we name the Message to be future Message, and if the view is behind
 // of current view, we name it as old Message. `old Message` and `invalid Message` will be dropped. and we use t
