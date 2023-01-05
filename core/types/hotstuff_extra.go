@@ -102,7 +102,7 @@ func (h *Header) SetBLSSignature(sig []byte) error {
 	return nil
 }
 
-// HotstuffFilteredHeader returns a filtered header which some information (like seal, committed seals)
+// HotstuffFilteredHeader returns a filtered header which some information (like seal, bls seal)
 // are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.
 func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
@@ -115,6 +115,7 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	if !keepSeal {
 		extra.Seal = []byte{}
 	}
+	extra.BLSSignature = []byte{}
 	extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)

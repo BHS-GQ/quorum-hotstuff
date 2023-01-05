@@ -228,7 +228,9 @@ func (s *backend) SealBlock(block *types.Block, prepareQC *hs.QuorumCert) (*type
 	}
 
 	// [TODO] Decide on how to sign consensus! Check startNewRound too
-	h.SetBLSSignature(prepareQC.BLSSignature)
+	if err := h.SetBLSSignature(prepareQC.BLSSignature); err != nil {
+		return nil, err
+	}
 
 	return block.WithSeal(h), nil
 }
