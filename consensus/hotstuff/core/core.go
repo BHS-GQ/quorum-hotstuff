@@ -58,8 +58,6 @@ func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Datab
 	return c
 }
 
-const maxRetry uint64 = 10
-
 func (c *core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
 

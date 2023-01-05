@@ -163,7 +163,8 @@ func (c *core) handleDecide(data *hs.Message) error {
 	}
 	if !c.IsProposer() && c.currentState() == hs.StatePreCommitted {
 		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
-		sealedBlock, err := c.backend.SealBlock(lockedBlock)
+		prepareQC := c.current.PrepareQC()
+		sealedBlock, err := c.backend.SealBlock(lockedBlock, prepareQC)
 		if err != nil {
 			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
 			return err
@@ -213,7 +214,7 @@ func (c *core) commit(sealedBlock *types.Block) error {
 		}
 	}
 
-	return c.backend.Commit(c.current.executed) // [TODO]
+	return c.backend.Commit(c.current.executed) // [TODO] Fix executed block usage
 }
 
 // handleFinalCommitted start new round if consensus engine accept notify signal from miner.worker.

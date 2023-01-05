@@ -215,6 +215,23 @@ func (s *backend) Unicast(valSet hs.ValidatorSet, payload []byte) error {
 	return nil
 }
 
+// SealBlock seals block within consensus by
+// adding PrepareQC BLS AggSig to block header
+func (s *backend) SealBlock(block *types.Block, prepareQC *hs.QuorumCert) (*types.Block, error) {
+
+	// check proposal
+	h := block.Header()
+	if h == nil {
+		s.logger.Error("Invalid proposal precommit")
+		return nil, errInvalidProposal
+	}
+
+	// [TODO] Decide on how to sign consensus! Check startNewRound too
+	h.SetBLSSignature(prepareQC.BLSSignature)
+
+	return block.WithSeal(h), nil
+}
+
 func (s *backend) Commit(block *types.Block) error {
 	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.Number().Uint64())
 

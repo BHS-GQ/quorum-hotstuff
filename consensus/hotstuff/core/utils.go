@@ -166,11 +166,12 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 	if err != nil {
 		return nil, err
 	}
-	if extra.Seal == nil || extra.BLSSignature == nil {
+	if extra.Seal == nil {
 		return nil, errInvalidNode
 	}
 
-	qc.BLSSignature = extra.BLSSignature
+	// [TODO] extra.BLSSignature with predetermined msg for genesis
+
 	return qc, nil
 }
 
@@ -263,6 +264,7 @@ func (c *core) checkBlock(block *types.Block) error {
 // checkVote vote should equal to current round state
 func (c *core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 	// [TODO] Can we check if partial signature is valid?
+	// YES! With bls.Verify()
 
 	if vote == nil {
 		return fmt.Errorf("current vote is nil")
