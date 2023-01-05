@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -132,8 +133,8 @@ func (s *HotstuffSigner) HeaderRecoverProposer(header *types.Header) (common.Add
 		return common.Address{}, errInvalidExtraDataFormat
 	}
 
-	payload := s.HeaderHash(header).Bytes()
-	addr, err := getSignatureAddress(payload, extra.Seal)
+	headerHash := s.HeaderHash(header)
+	addr, err := getSignatureAddress(headerHash, extra.Seal)
 	if err != nil {
 		return addr, err
 	}
@@ -164,9 +165,19 @@ func (s *HotstuffSigner) SignerSeal(h *types.Header) error {
 }
 
 // GetSignatureAddress gets the address address from the signature
-func (s *HotstuffSigner) CheckSignature(valSet hs.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
+func (s *HotstuffSigner) CheckSignature(valSet hs.ValidatorSet, hash common.Hash, sig []byte) (common.Address, error) {
+	if valSet == nil {
+		return hs.EmptyAddress, fmt.Errorf("invalid ValidatorSet")
+	}
+	if hash == hs.EmptyHash {
+		return hs.EmptyAddress, errInvalidRawHash
+	}
+	if sig == nil {
+		return hs.EmptyAddress, errInvalidSignature
+	}
+
 	// 1. Get signature address
-	signer, err := getSignatureAddress(data, sig)
+	signer, err := getSignatureAddress(hash, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -205,11 +216,16 @@ func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hs.Valid
 	return append(buf.Bytes(), payload...), nil
 }
 
-func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
-	// 1. Keccak data
-	hashData := crypto.Keccak256(data)
+func getSignatureAddress(hash common.Hash, sig []byte) (common.Address, error) {
+	if hash == hs.EmptyHash {
+		return hs.EmptyAddress, errInvalidRawHash
+	}
+	if sig == nil {
+		return hs.EmptyAddress, errInvalidSignature
+	}
+
 	// 2. Recover public key
-	pubkey, err := crypto.SigToPub(hashData, sig)
+	pubkey, err := crypto.SigToPub(hash.Bytes(), sig)
 	if err != nil {
 		return common.Address{}, err
 	}

@@ -136,6 +136,7 @@ func (s *backend) Broadcast(valSet hs.ValidatorSet, payload []byte) error {
 	}
 	// send to self
 	msg := hs.MessageEvent{
+		Src:     s.Address(),
 		Payload: payload,
 	}
 	go s.EventMux().Post(msg)
@@ -178,7 +179,7 @@ func (s *backend) Gossip(valSet hs.ValidatorSet, payload []byte) error {
 
 // Unicast implements hs.Backend.Unicast
 func (s *backend) Unicast(valSet hs.ValidatorSet, payload []byte) error {
-	msg := hs.MessageEvent{Payload: payload}
+	msg := hs.MessageEvent{Src: s.Address(), Payload: payload}
 	leader := valSet.GetProposer()
 	target := leader.Address()
 	hash := hs.RLPHash(payload)

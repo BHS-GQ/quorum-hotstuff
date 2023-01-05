@@ -41,7 +41,7 @@ type Signer interface {
 	SignerSeal(h *types.Header) error
 
 	// CheckSignature checks if ECDSA-signed data comes from a validator
-	CheckSignature(valSet ValidatorSet, data []byte, sig []byte) (common.Address, error)
+	CheckSignature(valSet ValidatorSet, hash common.Hash, sig []byte) (common.Address, error)
 
 	// BuildPrepareExtra builds a block's Extra field for Prepare stage
 	BuildPrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)

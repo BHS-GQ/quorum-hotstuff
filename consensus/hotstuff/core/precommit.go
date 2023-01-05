@@ -135,6 +135,7 @@ func (c *core) acceptPrepareQC(prepareQC *hs.QuorumCert) error {
 	if err := c.current.SetTreeNode(c.current.TreeNode()); err != nil {
 		return err
 	}
+	c.logger.Debug("Treenode block hash", "hash", c.current.node.node.Block.Hash().String())
 	if err := c.current.SetPrepareQC(prepareQC); err != nil {
 		return err
 	}

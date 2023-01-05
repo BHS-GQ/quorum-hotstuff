@@ -358,7 +358,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
+func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func(common.Hash, []byte) (common.Address, error)) error {
 	// Decode Message
 	var err error
 
@@ -367,7 +367,7 @@ func (m *Message) FromPayload(src common.Address, payload []byte, validateFn fun
 	}
 
 	// Check for nil fields
-	if m.View == nil || m.Address == EmptyAddress || m.Msg == nil {
+	if m.View == nil || m.Msg == nil {
 		return errInvalidMessage
 	}
 
@@ -376,11 +376,11 @@ func (m *Message) FromPayload(src common.Address, payload []byte, validateFn fun
 		return err
 	}
 	if validateFn != nil {
-		signer, err := validateFn(m.hash.Bytes(), m.Signature)
+		signer, err := validateFn(m.hash, m.Signature)
 		if err != nil {
 			return err
 		}
-		if !bytes.Equal(signer.Bytes(), m.Address.Bytes()) {
+		if !bytes.Equal(signer.Bytes(), src.Bytes()) {
 			return errInvalidSigner
 		}
 	}
@@ -395,7 +395,6 @@ func (m *Message) Payload() ([]byte, error) {
 
 func (m *Message) PayloadNoSig() ([]byte, error) {
 	data, err := rlp.EncodeToBytes(&Message{
-		Address:   common.Address{},
 		Code:      m.Code,
 		View:      m.View,
 		Msg:       m.Msg,
@@ -439,7 +438,7 @@ func (m *Message) Copy() *Message {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s, View: %v}", m.Code.String(), m.Address.Hex(), m.View)
+	return fmt.Sprintf("{MsgType: %s, Address: %s, View: %v, Signature: %x, Msg: %x}", m.Code.String(), m.Address.Hex(), m.View, m.Signature, m.Msg)
 }
 
 type Vote struct {

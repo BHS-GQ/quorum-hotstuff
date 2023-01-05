@@ -162,15 +162,16 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 	}
 
 	// Get AggSig of PrepareQC from lastBlock header
-	extra, err := types.ExtractHotstuffExtra(lastBlock.Header())
-	if err != nil {
-		return nil, err
-	}
-	if extra.Seal == nil {
-		return nil, errInvalidNode
-	}
+	// extra, err := types.ExtractHotstuffExtra(lastBlock.Header())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if extra.Seal == nil {
+	// 	return nil, errInvalidNode
+	// }
 
 	// [TODO] extra.BLSSignature with predetermined msg for genesis
+	qc.BLSSignature = []byte{}
 
 	return qc, nil
 }
@@ -271,8 +272,9 @@ func (c *core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 	}
 
 	expectedVote := c.current.UnsignedVote(code)
-	if !reflect.DeepEqual(expectedVote, vote) {
-		return fmt.Errorf("expect %s, got %s", expectedVote, vote)
+	unsignedVote := vote.Unsigned()
+	if !reflect.DeepEqual(expectedVote, unsignedVote) {
+		return fmt.Errorf("expect %s, got %s", expectedVote, unsignedVote)
 	}
 
 	voteBytes, err := hs.Encode(vote.Unsigned())

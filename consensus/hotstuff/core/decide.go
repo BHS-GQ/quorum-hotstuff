@@ -53,24 +53,25 @@ func (c *core) handleCommitVote(data *hs.Message) error {
 
 	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() == hs.StatePreCommitted {
-		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
-		prepareQC := c.current.PrepareQC()
-		sealedBlock, err := c.backend.SealBlock(lockedBlock, prepareQC)
-		if err != nil {
-			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
-			return err
-		}
+		// // [TODO] Seal block with BLS Aggregated Sig of PrepareQC
+		// prepareQC := c.current.PrepareQC()
+		// sealedBlock, err := c.backend.SealBlock(lockedBlock, prepareQC)
+		// if err != nil {
+		// 	logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+		// 	return err
+		// }
 		commitQC, err := c.messages2qc(code)
 		if err != nil {
 			logger.Trace("Failed to assemble commitQC", "msg", code, "err", err)
 			return err
 		}
-		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
-			logger.Trace("Failed to accept commitQC")
+		if err := c.acceptCommitQC(lockedBlock, commitQC); err != nil {
+			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
+			return err
 		}
 		logger.Trace("acceptCommit", "msg", code, "msgSize", size)
 
-		c.sendDecide(sealedBlock.Hash(), commitQC)
+		c.sendDecide(lockedBlock.Hash(), commitQC)
 	}
 
 	return nil
@@ -162,18 +163,18 @@ func (c *core) handleDecide(data *hs.Message) error {
 		}
 	}
 	if !c.IsProposer() && c.currentState() == hs.StatePreCommitted {
-		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
-		prepareQC := c.current.PrepareQC()
-		sealedBlock, err := c.backend.SealBlock(lockedBlock, prepareQC)
-		if err != nil {
-			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
-			return err
-		}
-		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
+		// // [TODO] Seal block with BLS Aggregated Sig of PrepareQC
+		// prepareQC := c.current.PrepareQC()
+		// _, err := c.backend.SealBlock(lockedBlock, prepareQC)
+		// if err != nil {
+		// 	logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+		// 	return err
+		// }
+		if err := c.acceptCommitQC(lockedBlock, commitQC); err != nil {
 			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
 			return err
 		}
-		if err := c.commit(sealedBlock); err != nil {
+		if err := c.commit(lockedBlock); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err
 		}

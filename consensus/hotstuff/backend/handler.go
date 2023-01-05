@@ -84,6 +84,7 @@ func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		s.knownMessages.Add(hash, true)
 
 		go s.eventMux.Post(hotstuff.MessageEvent{
+			Src:     addr,
 			Payload: data,
 		})
 		return true, nil

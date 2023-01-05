@@ -36,7 +36,7 @@ type core struct {
 	pendingRequests   *prque.Prque
 	pendingRequestsMu *sync.Mutex
 
-	validateFn func([]byte, []byte) (common.Address, error)
+	validateFn func(common.Hash, []byte) (common.Address, error)
 	isRunning  bool
 }
 
@@ -171,6 +171,6 @@ func (c *core) setCurrentState(s hs.State) {
 	c.processBacklog()
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return c.signer.CheckSignature(c.valSet, data, sig)
+func (c *core) checkValidatorSignature(hash common.Hash, sig []byte) (common.Address, error) {
+	return c.signer.CheckSignature(c.valSet, hash, sig)
 }

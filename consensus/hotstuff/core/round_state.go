@@ -206,7 +206,7 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 		return fmt.Errorf("locked block is nil")
 	}
 	if s.node.node.Block.Hash() != block.Hash() {
-		return fmt.Errorf("node block not equal to multi-seal block")
+		return fmt.Errorf("node block not equal to multi-seal block %s vs. %s", s.node.node.Block.Hash().String(), block.Hash().String())
 	}
 	s.node.node.Block = block
 	if err := s.storeNode(s.node.node); err != nil {
@@ -219,7 +219,7 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 
 func (s *roundState) UnsignedVote(code hs.MsgType) *hs.Vote {
 	node := s.TreeNode()
-	if node == nil || s.node.node.Hash() == hs.EmptyHash {
+	if node == nil || node.Hash() == hs.EmptyHash {
 		return nil
 	}
 
