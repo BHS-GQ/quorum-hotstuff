@@ -165,11 +165,4 @@ type HotStuff interface {
 	Stop() error
 }
 
-type ExecutedBlock struct {
-	State    *state.StateDB
-	Block    *types.Block
-	Receipts types.Receipts
-	Logs     []*types.Log
-}
-
 // /Hotstuff

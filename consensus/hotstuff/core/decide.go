@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -55,7 +54,8 @@ func (c *core) handleCommitVote(data *hs.Message) error {
 	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() == hs.StatePreCommitted {
 		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
-		sealedBlock, err := c.backend.SealBlock(lockedBlock)
+		prepareQC := c.current.PrepareQC()
+		sealedBlock, err := c.backend.SealBlock(lockedBlock, prepareQC)
 		if err != nil {
 			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
 			return err
@@ -201,20 +201,7 @@ func (c *core) commit(sealedBlock *types.Block) error {
 		return fmt.Errorf("expect locked block %v, got %v", lockedBlock.Hash(), sealedBlock.Hash())
 	}
 
-	if c.current.executed == nil || c.current.executed.Block == nil || c.current.executed.Block.Hash() != sealedBlock.Hash() {
-		if c.IsProposer() {
-			c.current.executed = &consensus.ExecutedBlock{Block: sealedBlock}
-		} else {
-			executed, err := c.backend.ExecuteBlock(sealedBlock) // [TODO]
-			if err != nil {
-				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
-			}
-			executed.Block = sealedBlock
-			c.current.executed = executed
-		}
-	}
-
-	return c.backend.Commit(c.current.executed) // [TODO] Fix executed block usage
+	return c.backend.Commit(sealedBlock)
 }
 
 // handleFinalCommitted start new round if consensus engine accept notify signal from miner.worker.

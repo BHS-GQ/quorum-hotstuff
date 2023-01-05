@@ -49,6 +49,8 @@ type Backend interface {
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
 
+	SealBlock(block *types.Block, prepareQC *QuorumCert) (*types.Block, error)
+
 	Close() error
 }
 
