@@ -141,7 +141,7 @@ func (c *core) updateRoundState(lastProposal *types.Block, newView *hs.View) err
 	}
 
 	prepareQC := c.current.PrepareQC()
-	if prepareQC != nil && prepareQC.TreeNode == lastProposal.Hash() {
+	if prepareQC != nil {
 		c.logger.Trace("EpochStartPrepareQC already exist!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", prepareQC.TreeNode, "qc.view", prepareQC.View, "qc.proposer", prepareQC.Proposer)
 		return nil
 	}
