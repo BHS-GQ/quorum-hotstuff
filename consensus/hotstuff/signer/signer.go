@@ -244,7 +244,9 @@ func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
 		View:     qc.View,
 		TreeNode: qc.TreeNode,
 	})
-	s.BLSVerifyAggSig(data, qc.BLSSignature)
+	if err := s.BLSVerifyAggSig(data, qc.BLSSignature); err != nil {
+		return err
+	}
 
 	return nil
 }
