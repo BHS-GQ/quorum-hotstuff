@@ -29,7 +29,7 @@ var (
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
-	return s.signer.HeaderRecoverProposer(header)
+	return s.signer.RecoverSigner(header)
 }
 
 func (s *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
@@ -278,9 +278,10 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	// [TODO] Verify validators in extraData. Validators in snapshot and extraData should be the same.
 
 	// Resolve auth key and check against signers
-	if _, err := s.signer.HeaderRecoverProposer(header); err != nil {
+	if _, err := s.signer.RecoverSigner(header); err != nil {
 		return err
 	}
 
-	return nil
+	snap := s.snap().Copy()
+	return s.signer.VerifyHeader(header, snap, seal)
 }

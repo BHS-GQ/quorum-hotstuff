@@ -26,6 +26,9 @@ type Signer interface {
 	// Intended for HotStuff replicas
 	VerifyQC(qc *QuorumCert) error
 
+	// VerifyHeader verify proposer signature and committed seals
+	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) error
+
 	// Not BLS
 
 	// Sign signs data for ECDSA authetication
@@ -35,7 +38,7 @@ type Signer interface {
 	HeaderHash(header *types.Header) (hash common.Hash)
 
 	// Recover extracts the proposer address from a signed header
-	HeaderRecoverProposer(header *types.Header) (common.Address, error)
+	RecoverSigner(header *types.Header) (common.Address, error)
 
 	// SignerSeal proposer signs header with ECDSA
 	SignerSeal(h *types.Header) error

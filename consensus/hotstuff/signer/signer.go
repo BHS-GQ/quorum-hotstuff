@@ -93,6 +93,41 @@ func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 	return nil
 }
 
+func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorSet, seal bool) error {
+	// Verifying the genesis block is not supported
+	number := header.Number.Uint64()
+	if number == 0 {
+		return nil
+	}
+
+	// resolve the authorization key and check against signers
+	signer, err := s.RecoverSigner(header)
+	if err != nil {
+		return err
+	}
+	if signer != header.Coinbase {
+		return errInvalidSigner
+	}
+
+	// Signer should be in the validator set of previous block's extraData.
+	if _, v := valSet.GetByAddress(signer); v == nil {
+		return errUnauthorized
+	}
+
+	if seal {
+		_, err := types.ExtractHotstuffExtra(header)
+		if err != nil {
+			return errInvalidExtraDataFormat
+		}
+
+		// Check if block is correct against current TreeNode
+
+		// Check if header's BLSSignature is correct against
+	}
+
+	return nil
+}
+
 // VVV Not BLS related section VVV
 
 func (s *HotstuffSigner) Sign(hash common.Hash) ([]byte, error) {
@@ -118,8 +153,8 @@ func (s *HotstuffSigner) HeaderHash(header *types.Header) (hash common.Hash) {
 	return hash
 }
 
-// HeaderRecoverProposer extracts the proposer address from a signed header.
-func (s *HotstuffSigner) HeaderRecoverProposer(header *types.Header) (common.Address, error) {
+// RecoverSigner extracts the proposer address from a signed header.
+func (s *HotstuffSigner) RecoverSigner(header *types.Header) (common.Address, error) {
 	hash := header.Hash()
 	if s.signatures != nil {
 		if addr, ok := s.signatures.Get(hash); ok {
