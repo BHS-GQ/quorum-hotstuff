@@ -93,6 +93,25 @@ func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 	return nil
 }
 
+func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
+	// skip genesis block
+	if qc.View.Height.Uint64() == 0 {
+		return nil
+	}
+
+	// check proposer signature
+	data, _ := hs.Encode(&hs.Vote{
+		Code:     qc.Code,
+		View:     qc.View,
+		TreeNode: qc.TreeNode,
+	})
+	if err := s.BLSVerifyAggSig(data, qc.BLSSignature); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorSet, seal bool) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
@@ -115,14 +134,23 @@ func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorS
 	}
 
 	if seal {
-		_, err := types.ExtractHotstuffExtra(header)
+		extra, err := types.ExtractHotstuffExtra(header)
 		if err != nil {
 			return errInvalidExtraDataFormat
 		}
+		encodedQC := extra.EncodedQC
 
-		// Check if block is correct against current TreeNode
+		var commitQC *hs.QuorumCert
+		if err := rlp.DecodeBytes(encodedQC, &commitQC); err != nil {
+			s.logger.Trace("Failed to decode", "err", err)
+			return err
+		}
 
-		// Check if header's BLSSignature is correct against
+		// Check CommitQC delivered via header
+		if err := s.VerifyQC(commitQC); err != nil {
+			s.logger.Trace("Failed to verify QC in header", "err", err)
+			return err
+		}
 	}
 
 	return nil
@@ -265,23 +293,4 @@ func getSignatureAddress(hash common.Hash, sig []byte) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
-}
-
-func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
-	// skip genesis block
-	if qc.View.Height.Uint64() == 0 {
-		return nil
-	}
-
-	// check proposer signature
-	data, _ := hs.Encode(&hs.Vote{
-		Code:     qc.Code,
-		View:     qc.View,
-		TreeNode: qc.TreeNode,
-	})
-	if err := s.BLSVerifyAggSig(data, qc.BLSSignature); err != nil {
-		return err
-	}
-
-	return nil
 }

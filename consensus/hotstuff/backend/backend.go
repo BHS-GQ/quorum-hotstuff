@@ -218,7 +218,7 @@ func (s *backend) Unicast(valSet hs.ValidatorSet, payload []byte) error {
 
 // SealBlock seals block within consensus by
 // adding PrepareQC BLS AggSig to block header
-func (s *backend) SealBlock(block *types.Block, prepareQC *hs.QuorumCert) (*types.Block, error) {
+func (s *backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types.Block, error) {
 
 	// check proposal
 	h := block.Header()
@@ -227,8 +227,11 @@ func (s *backend) SealBlock(block *types.Block, prepareQC *hs.QuorumCert) (*type
 		return nil, errInvalidProposal
 	}
 
-	// [TODO] Decide on how to sign consensus! Check startNewRound too
-	if err := h.SetBLSSignature(prepareQC.BLSSignature); err != nil {
+	encodedQC, err := hs.Encode(commitQC)
+	if err != nil {
+		return nil, err
+	}
+	if err := h.SetEncodedQC(encodedQC); err != nil {
 		return nil, err
 	}
 

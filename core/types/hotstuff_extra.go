@@ -23,7 +23,7 @@ var (
 type HotstuffExtra struct {
 	Validators []common.Address
 
-	BLSSignature []byte
+	EncodedQC []byte
 
 	Seal []byte
 	Salt []byte
@@ -33,7 +33,7 @@ type HotstuffExtra struct {
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,
-		ist.BLSSignature,
+		ist.EncodedQC,
 		ist.Seal,
 		ist.Salt,
 	})
@@ -42,15 +42,29 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
-		Validators   []common.Address
-		BLSSignature []byte
-		Seal         []byte
-		Salt         []byte
+		Validators []common.Address
+		EncodedQC  []byte
+		Seal       []byte
+		Salt       []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.BLSSignature, ist.Salt = extra.Validators, extra.Seal, extra.BLSSignature, extra.Salt
+	ist.Validators, ist.Seal, ist.EncodedQC, ist.Salt = extra.Validators, extra.Seal, extra.EncodedQC, extra.Salt
+	return nil
+}
+
+func (h *Header) SetEncodedQC(encodedQC []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.EncodedQC = encodedQC
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
 	return nil
 }
 
@@ -88,20 +102,6 @@ func (h *Header) SetSeal(seal []byte) error {
 	return nil
 }
 
-func (h *Header) SetBLSSignature(sig []byte) error {
-	extra, err := ExtractHotstuffExtra(h)
-	if err != nil {
-		return err
-	}
-	extra.BLSSignature = sig
-	payload, err := rlp.EncodeToBytes(&extra)
-	if err != nil {
-		return err
-	}
-	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
-	return nil
-}
-
 // HotstuffFilteredHeader returns a filtered header which some information (like seal, bls seal)
 // are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.
@@ -115,7 +115,7 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	if !keepSeal {
 		extra.Seal = []byte{}
 	}
-	extra.BLSSignature = []byte{}
+	extra.EncodedQC = []byte{}
 	extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)
