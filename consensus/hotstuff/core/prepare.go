@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -117,6 +118,10 @@ func (c *core) handlePrepare(data *hs.Message) error {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
 		return errVerifyUnsealedProposal
 	}
+	if err := c.executeBlock(block); err != nil {
+		logger.Trace("Failed to execute block", "msg", code, "src", src, "err", err)
+		return err
+	}
 
 	// safety and liveness rules judgement.
 	highQC := msg.QC
@@ -152,6 +157,21 @@ func (c *core) handlePrepare(data *hs.Message) error {
 		c.sendVote(hs.MsgTypePrepareVote)
 	}
 
+	return nil
+}
+
+// proposer do not need execute block again after miner.worker commitNewWork.
+func (c *core) executeBlock(block *types.Block) error {
+	if c.IsProposer() {
+		c.current.executed = &consensus.ExecutedBlock{Block: block}
+		return nil
+	}
+
+	executed, err := c.backend.ExecuteBlock(block)
+	if err != nil {
+		return err
+	}
+	c.current.executed = executed
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -31,7 +32,7 @@ type Backend interface {
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
-	Commit(block *types.Block) error
+	Commit(executed *consensus.ExecutedBlock) error
 
 	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
 	// the time difference of the proposal and current time is also returned.
@@ -48,6 +49,9 @@ type Backend interface {
 
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
+
+	// ExecuteBlock execute block which contained in prepare message, and validate block state
+	ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error)
 
 	SealBlock(block *types.Block, prepareQC *QuorumCert) (*types.Block, error)
 

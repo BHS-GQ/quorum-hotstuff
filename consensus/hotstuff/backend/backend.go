@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -73,7 +74,8 @@ type backend struct {
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
 
-	eventMux *event.TypeMux
+	executeFeed event.Feed // event subscription for executed state
+	eventMux    *event.TypeMux
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
@@ -238,7 +240,14 @@ func (s *backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types
 	return block.WithSeal(h), nil
 }
 
-func (s *backend) Commit(block *types.Block) error {
+func (s *backend) Commit(executed *consensus.ExecutedBlock) error {
+	block := executed.Block
+
+	if executed == nil || executed.Block == nil {
+		return fmt.Errorf("invalid executed block")
+	}
+	s.executeFeed.Send(*executed)
+
 	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.Number().Uint64())
 
 	// - if the proposed and committed blocks are the same, send the proposed hash
@@ -326,4 +335,17 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return s.hasBadBlock(s.db, hash)
+}
+
+func (s *backend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
+	state, receipts, allLogs, err := s.chain.ExecuteBlock(block)
+	if err != nil {
+		return nil, err
+	}
+	return &consensus.ExecutedBlock{
+		State:    state,
+		Block:    block,
+		Receipts: receipts,
+		Logs:     allLogs,
+	}, nil
 }

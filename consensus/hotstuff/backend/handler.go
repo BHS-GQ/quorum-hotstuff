@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -131,4 +132,8 @@ func (s *backend) NewChainHead(header *types.Header) error {
 	}
 	go s.eventMux.Post(hotstuff.FinalCommittedEvent{Header: header})
 	return nil
+}
+
+func (s *backend) SubscribeBlock(ch chan<- consensus.ExecutedBlock) event.Subscription {
+	return s.executeFeed.Subscribe(ch)
 }
