@@ -84,7 +84,7 @@ func New(
 	db ethdb.Database,
 	valset hs.ValidatorSet,
 	blsInfo *types.BLSInfo,
-) consensus.HotStuff {
+) *backend {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
