@@ -42,3 +42,12 @@ func (api *API) Discard(address common.Address) {
 
 	delete(api.hotstuff.proposals, address)
 }
+
+// CurrentView retrieve current proposal height and round number
+func (api *API) CurrentSequence() (uint64, uint64) {
+	return api.hotstuff.core.CurrentSequence()
+}
+
+func (api *API) IsProposer() bool {
+	return api.hotstuff.core.IsProposer()
+}

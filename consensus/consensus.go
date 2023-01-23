@@ -138,6 +138,8 @@ type Handler interface {
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
 
+	GetBroadcaster() Broadcaster
+
 	// SubscribeBlock subscribe for listening executedBlock in miner.worker
 	SubscribeBlock(ch chan<- ExecutedBlock) event.Subscription
 }
