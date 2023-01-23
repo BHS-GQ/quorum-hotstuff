@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -126,4 +127,58 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader.Extra = append(newHeader.Extra[:HotstuffExtraVanity], payload...)
 
 	return newHeader
+}
+
+func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) error {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:HotstuffExtraVanity])
+
+	if vals == nil {
+		vals = []common.Address{}
+	}
+	ist := &HotstuffExtra{
+		Validators: vals,
+		EncodedQC:  []byte{},
+		Seal:       []byte{},
+		Salt:       []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return err
+	}
+	header.Extra = append(buf.Bytes(), payload...)
+	return nil
+}
+
+func GenerateExtraWithSignature(epochStartHeight, epochEndHeight uint64, vals []common.Address, seal []byte, encodedQC []byte) ([]byte, error) {
+	var (
+		buf   bytes.Buffer
+		extra []byte
+	)
+
+	extra = append(extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(extra))...)
+	buf.Write(extra[:HotstuffExtraVanity])
+
+	if vals == nil {
+		vals = []common.Address{}
+	}
+	ist := &HotstuffExtra{
+		Validators: vals,
+		Seal:       seal,
+		EncodedQC:  encodedQC,
+		Salt:       []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
+	}
+	extra = append(buf.Bytes(), payload...)
+	return extra, nil
 }
