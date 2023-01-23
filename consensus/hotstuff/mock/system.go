@@ -226,12 +226,14 @@ func newAccountLists(n int) ([]*ecdsa.PrivateKey, []*types.BLSInfo, []common.Add
 	priPolyShares := priPoly.Shares(n)
 	blsinfos := make([]*types.BLSInfo, n)
 
-	for i, blsinfo := range blsinfos {
-		blsinfo.T = t
-		blsinfo.N = n
-		blsinfo.Suite = suite
-		blsinfo.BLSPrivKey = priPolyShares[i]
-		blsinfo.BLSPubPoly = pubPoly
+	for i := 0; i < n; i++ {
+		blsinfos[i] = &types.BLSInfo{
+			T:          t,
+			N:          n,
+			Suite:      suite,
+			BLSPrivKey: priPolyShares[i],
+			BLSPubPoly: pubPoly,
+		}
 	}
 
 	return pks, blsinfos, addrs
