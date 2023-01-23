@@ -122,7 +122,25 @@ func (p *MockPeer) Send(msgcode uint64, data interface{}) error {
 	return nil
 }
 
-func (p *MockPeer) SendConsensus(msgcode uint64, data interface{}) error { return nil }
+func (p *MockPeer) SendConsensus(msgcode uint64, data interface{}) error {
+	send := true
+
+	if p.geth.hook != nil && msgcode == hotstuffMsg {
+		if raw, ok := data.([]byte); !ok {
+			panic("Send hotstuff message data convert failed")
+		} else {
+			data, send = p.geth.hook(p.geth, raw)
+		}
+	}
+	if send {
+		if err := p2p.Send(p.rw, msgcode, data); err != nil {
+			log.Error("Failed to send msg", "local", p.local, "remote", p.remote, "err", err)
+			return err
+		}
+	}
+
+	return nil
+}
 
 func (p *MockPeer) SendQBFTConsensus(msgcode uint64, data []byte) error { return nil }
 
