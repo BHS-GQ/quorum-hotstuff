@@ -43,10 +43,7 @@ type HotstuffSigner struct {
 func NewSigner(
 	privateKey *ecdsa.PrivateKey,
 	commitMsgType byte,
-	suite *bn256.Suite,
-	blsPubPoly *share.PubPoly,
-	blsPrivKey *share.PriShare,
-	t, n int,
+	blsInfo *types.BLSInfo,
 ) hs.Signer {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
@@ -55,12 +52,12 @@ func NewSigner(
 		privateKey:    privateKey,
 		signatures:    signatures,
 		commitSigSalt: commitMsgType,
-		suite:         suite,
+		suite:         blsInfo.Suite,
 		logger:        log.New(),
-		blsPubPoly:    blsPubPoly,
-		blsPrivKey:    blsPrivKey,
-		t:             t,
-		n:             n,
+		blsPubPoly:    blsInfo.BLSPubPoly,
+		blsPrivKey:    blsInfo.BLSPrivKey,
+		t:             blsInfo.T,
+		n:             blsInfo.N,
 	}
 }
 

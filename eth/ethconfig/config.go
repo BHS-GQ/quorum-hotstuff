@@ -36,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -261,7 +262,15 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		t := valset.Q()
 		suite, blsPubPoly, blsPrivKey := stack.Config().BLSKeys(n, t)
 
-		return hotstuffBackend.New(config, nodeKey, db, valset, suite, blsPubPoly, blsPrivKey)
+		blsInfo := &types.BLSInfo{
+			T:          t,
+			N:          n,
+			Suite:      suite,
+			BLSPubPoly: blsPubPoly,
+			BLSPrivKey: blsPrivKey,
+		}
+
+		return hotstuffBackend.New(config, nodeKey, db, valset, blsInfo)
 	}
 	// /HotStuff
 

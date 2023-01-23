@@ -37,8 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
-	"go.dedis.ch/kyber/v3/pairing/bn256"
-	"go.dedis.ch/kyber/v3/share"
 )
 
 const (
@@ -85,17 +83,13 @@ func New(
 	privateKey *ecdsa.PrivateKey,
 	db ethdb.Database,
 	valset hs.ValidatorSet,
-	suite *bn256.Suite,
-	blsPubPoly *share.PubPoly,
-	blsPrivKey *share.PriShare,
+	blsInfo *types.BLSInfo,
 ) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	t, n := valset.Q(), valset.Size()
-
-	signer := snr.NewSigner(privateKey, byte(hs.MsgTypePrepareVote), suite, blsPubPoly, blsPrivKey, t, n)
+	signer := snr.NewSigner(privateKey, byte(hs.MsgTypePrepareVote), blsInfo)
 	backend := &backend{
 		config:         config,
 		db:             db,
