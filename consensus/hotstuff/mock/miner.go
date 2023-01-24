@@ -154,21 +154,19 @@ func (m *miner) commit(data *consensus.ExecutedBlock) {
 	}
 
 	var (
-		sealhash    = m.engine.SealHash(block.Header())
-		hash        = block.Hash()
-		receipts    []*types.Receipt
-		logs        []*types.Log
-		statedb     *state.StateDB
-		privstatedb mps.PrivateStateRepository
-		task        *task
-		exist       bool
+		sealhash = m.engine.SealHash(block.Header())
+		hash     = block.Hash()
+		receipts []*types.Receipt
+		logs     []*types.Log
+		statedb  *state.StateDB
+		task     *task
+		exist    bool
 	)
 
 	if data.State != nil {
 		receipts = data.Receipts
 		logs = data.Logs
 		statedb = data.State
-		privstatedb = m.current.privstate
 	} else {
 		m.pendingMu.RLock()
 		task, exist = m.pendingTasks[sealhash]
@@ -198,7 +196,7 @@ func (m *miner) commit(data *consensus.ExecutedBlock) {
 	}
 
 	// Commit block and state to database.
-	_, err := m.chain.WriteBlockWithState(block, receipts, logs, statedb, privstatedb, true)
+	_, err := m.chain.WriteBlockWithState(block, receipts, logs, statedb, m.current.privstate, true)
 	if err != nil {
 		log.Error("Failed writing block to chain", "err", err)
 		return

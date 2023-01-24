@@ -133,36 +133,39 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return err
 	}
 	block = block.WithSeal(header)
+	go s.EventMux().Post(hotstuff.RequestEvent{
+		Block: block,
+	})
 	s.logger.Trace("WorkerSealNewBlock", "height", block.Number())
 
-	go func() {
-		// get the proposed block hash and clear it if the seal() is completed.
-		s.sealMu.Lock()
-		s.proposedBlockHash = block.Hash()
+	// go func() {
+	// 	// get the proposed block hash and clear it if the seal() is completed.
+	// 	s.sealMu.Lock()
+	// 	s.proposedBlockHash = block.Hash()
 
-		defer func() {
-			s.proposedBlockHash = common.Hash{}
-			s.sealMu.Unlock()
-		}()
-		// post block into HotStuff engine
-		go s.EventMux().Post(hotstuff.RequestEvent{
-			Block: block,
-		})
-		for {
-			select {
-			case result := <-s.commitCh:
-				// if the block hash and the hash from channel are the same,
-				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.Hash() == result.Hash() {
-					results <- result
-					return
-				}
-			case <-stop:
-				results <- nil
-				return
-			}
-		}
-	}()
+	// 	defer func() {
+	// 		s.proposedBlockHash = common.Hash{}
+	// 		s.sealMu.Unlock()
+	// 	}()
+	// 	// post block into HotStuff engine
+	// 	go s.EventMux().Post(hotstuff.RequestEvent{
+	// 		Block: block,
+	// 	})
+	// 	for {
+	// 		select {
+	// 		case result := <-s.commitCh:
+	// 			// if the block hash and the hash from channel are the same,
+	// 			// return the result. Otherwise, keep waiting the next hash.
+	// 			if result != nil && block.Hash() == result.Hash() {
+	// 				results <- result
+	// 				return
+	// 			}
+	// 		case <-stop:
+	// 			results <- nil
+	// 			return
+	// 		}
+	// 	}
+	// }()
 	return nil
 }
 
