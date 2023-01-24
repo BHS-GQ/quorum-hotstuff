@@ -34,10 +34,11 @@ func (c *core) handlePreCommitVote(data *hs.Message) error {
 	}
 
 	// queued vote into messageSet to ensure that at least 2/3 validator vote on the same step
-	// [TODO] ignore proposer self-vote
-	if err := c.current.AddPreCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-		return errAddPreCommitVote
+	if c.Address() != src {
+		if err := c.current.AddPreCommitVote(data); err != nil {
+			logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
+			return errAddPreCommitVote
+		}
 	}
 
 	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)
