@@ -133,39 +133,67 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return err
 	}
 	block = block.WithSeal(header)
-	go s.EventMux().Post(hotstuff.RequestEvent{
-		Block: block,
-	})
-	s.logger.Trace("WorkerSealNewBlock", "height", block.Number())
 
-	// go func() {
-	// 	// get the proposed block hash and clear it if the seal() is completed.
-	// 	s.sealMu.Lock()
-	// 	s.proposedBlockHash = block.Hash()
+	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
 
-	// 	defer func() {
-	// 		s.proposedBlockHash = common.Hash{}
-	// 		s.sealMu.Unlock()
-	// 	}()
-	// 	// post block into HotStuff engine
-	// 	go s.EventMux().Post(hotstuff.RequestEvent{
-	// 		Block: block,
-	// 	})
-	// 	for {
-	// 		select {
-	// 		case result := <-s.commitCh:
-	// 			// if the block hash and the hash from channel are the same,
-	// 			// return the result. Otherwise, keep waiting the next hash.
-	// 			if result != nil && block.Hash() == result.Hash() {
-	// 				results <- result
-	// 				return
-	// 			}
-	// 		case <-stop:
-	// 			results <- nil
-	// 			return
-	// 		}
-	// 	}
-	// }()
+	go func() {
+		// get the proposed block hash and clear it if the seal() is completed.
+		s.sealMu.Lock()
+		s.proposedBlockHash = block.Hash()
+
+		defer func() {
+			s.proposedBlockHash = common.Hash{}
+			s.sealMu.Unlock()
+		}()
+		// post block into HotStuff engine
+		go s.EventMux().Post(hotstuff.RequestEvent{
+			Block: block,
+		})
+		for {
+			select {
+			case result := <-s.commitCh:
+				// if the block hash and the hash from channel are the same,
+				// return the result. Otherwise, keep waiting the next hash.
+				if result != nil && block.Hash() == result.Hash() {
+					results <- result
+					return
+				}
+			case <-stop:
+				results <- nil
+				return
+			}
+		}
+	}()
+
+	return nil
+}
+
+func (s *backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
+	// update the block header timestamp and signature and propose the block to core engine
+	header := block.Header()
+	number := header.Number.Uint64()
+
+	// Bail out if we're unauthorized to sign a block
+	snap := s.snap()
+	if _, v := snap.GetByAddress(s.Address()); v == nil {
+		return errUnauthorized
+	}
+
+	parent := chain.GetHeader(header.ParentHash, number-1)
+	if parent == nil {
+		return consensus.ErrUnknownAncestor
+	}
+
+	// Sign the HotstuffExtra.Seal portion with ECDSA
+	if err = s.signer.SignerSeal(header); err != nil {
+		return err
+	}
+	block = block.WithSeal(header)
+
+	go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
+
+	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
+
 	return nil
 }
 

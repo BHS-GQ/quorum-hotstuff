@@ -136,7 +136,7 @@ func (m *miner) newWork() {
 	m.pendingTasks[sealHash] = task
 	m.pendingMu.Unlock()
 
-	if err := m.engine.Seal(m.chain, task.block, nil, nil); err != nil {
+	if err := m.engine.MockSeal(m.chain, task.block, nil, nil); err != nil {
 		log.Error("Block sealing failed", "err", err)
 		return
 	}
