@@ -222,7 +222,8 @@ func newAccountLists(n int) ([]*ecdsa.PrivateKey, []*types.BLSInfo, []common.Add
 
 	// BLS Signatures
 	t := Q(n)
-	suite, pubPoly, priPoly := GenerateBLSKeys(n, t)
+	f := F(n)
+	suite, pubPoly, priPoly := GenerateBLSKeys(n, f)
 	priPolyShares := priPoly.Shares(n)
 	blsinfos := make([]*types.BLSInfo, n)
 
