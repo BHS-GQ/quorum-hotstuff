@@ -45,11 +45,9 @@ func (c *core) handleCommitVote(data *hs.Message) error {
 	}
 
 	// queue vote into messageSet to ensure that at least 2/3 validator vote at the same step.
-	if c.Address() != src {
-		if err := c.current.AddCommitVote(data); err != nil {
-			logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-			return errAddPreCommitVote
-		}
+	if err := c.current.AddCommitVote(data); err != nil {
+		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
+		return errAddPreCommitVote
 	}
 
 	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote)

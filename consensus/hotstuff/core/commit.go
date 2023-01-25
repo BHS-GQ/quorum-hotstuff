@@ -24,6 +24,10 @@ func (c *core) handlePreCommitVote(data *hs.Message) error {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return err
 	}
+	if err := c.checkView(data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		return err
+	}
 	if err := c.checkVote(vote, hs.MsgTypePreCommitVote); err != nil {
 		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
 		return err
@@ -33,12 +37,9 @@ func (c *core) handlePreCommitVote(data *hs.Message) error {
 		return err
 	}
 
-	// queued vote into messageSet to ensure that at least 2/3 validator vote on the same step
-	if c.Address() != src {
-		if err := c.current.AddPreCommitVote(data); err != nil {
-			logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-			return errAddPreCommitVote
-		}
+	if err := c.current.AddPreCommitVote(data); err != nil {
+		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
+		return errAddPreCommitVote
 	}
 
 	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)

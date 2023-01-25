@@ -39,11 +39,9 @@ func (c *core) handlePrepareVote(data *hs.Message) error {
 	}
 
 	// queued vote into messageSet to ensure that at least 2/3 validators vote on the same step.
-	if c.Address() != src {
-		if err := c.current.AddPrepareVote(data); err != nil {
-			logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-			return errAddPrepareVote
-		}
+	if err := c.current.AddPrepareVote(data); err != nil {
+		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
+		return errAddPrepareVote
 	}
 
 	logger.Trace("handlePrepareVote", "msg", code, "src", src, "vote", vote)
