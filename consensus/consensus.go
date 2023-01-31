@@ -177,6 +177,14 @@ type HotStuff interface {
 	Stop() error
 }
 
+// MockHotStuff is used by the mock testing suite
+type MockHotStuff interface {
+	HotStuff
+
+	// MockSeal is the Seal() function called in the mock system
+	MockSeal(chain ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error
+}
+
 type ExecutedBlock struct {
 	State    *state.StateDB
 	Block    *types.Block

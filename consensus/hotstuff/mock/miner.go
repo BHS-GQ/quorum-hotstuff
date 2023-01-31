@@ -18,7 +18,7 @@ import (
 type miner struct {
 	addr   common.Address
 	chain  *core.BlockChain
-	engine consensus.HotStuff
+	engine consensus.MockHotStuff
 	geth   *Geth
 
 	current *environment
