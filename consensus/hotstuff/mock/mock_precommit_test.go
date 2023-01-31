@@ -21,8 +21,10 @@ func TestMockPreCommitCase1(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if !node.IsProposer() {
 				return data, true
 			}
@@ -49,6 +51,11 @@ func TestMockPreCommitCase1(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
+
 		return data, true
 	}
 
@@ -56,6 +63,10 @@ func TestMockPreCommitCase1(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitCase2
@@ -67,8 +78,10 @@ func TestMockPreCommitCase2(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if !node.IsProposer() {
 				return data, true
 			}
@@ -96,6 +109,9 @@ func TestMockPreCommitCase2(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -103,6 +119,10 @@ func TestMockPreCommitCase2(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitCase3
@@ -114,8 +134,10 @@ func TestMockPreCommitCase3(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if !node.IsProposer() {
 				return data, true
 			}
@@ -156,6 +178,9 @@ func TestMockPreCommitCase3(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -163,6 +188,10 @@ func TestMockPreCommitCase3(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitCase4
@@ -174,8 +203,10 @@ func TestMockPreCommitCase4(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if !node.IsProposer() {
 				return data, true
 			}
@@ -216,6 +247,9 @@ func TestMockPreCommitCase4(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -223,6 +257,10 @@ func TestMockPreCommitCase4(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitCase5
@@ -234,8 +272,10 @@ func TestMockPreCommitCase5(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if !node.IsProposer() {
 				return data, true
 			}
@@ -276,6 +316,9 @@ func TestMockPreCommitCase5(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -283,6 +326,10 @@ func TestMockPreCommitCase5(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitCase6
@@ -294,8 +341,10 @@ func TestMockPreCommitCase6(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if !node.IsProposer() {
 				return data, true
 			}
@@ -336,6 +385,9 @@ func TestMockPreCommitCase6(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -343,6 +395,10 @@ func TestMockPreCommitCase6(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitCase7
@@ -365,12 +421,14 @@ func TestMockPreCommitVoteCase1(t *testing.T) {
 	var locked int32
 	atomic.StoreInt32(&locked, 0)
 
-	sys := makeSystem(5) // N=5 can tolerate single failure
+	sys := makeSystem(4)
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -404,6 +462,9 @@ func TestMockPreCommitVoteCase1(t *testing.T) {
 				return payload, true
 			}
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -411,6 +472,10 @@ func TestMockPreCommitVoteCase1(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitVoteCase2
@@ -425,8 +490,10 @@ func TestMockPreCommitVoteCase2(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -460,6 +527,9 @@ func TestMockPreCommitVoteCase2(t *testing.T) {
 				return payload, true
 			}
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -467,6 +537,10 @@ func TestMockPreCommitVoteCase2(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitVoteCase3
@@ -481,8 +555,10 @@ func TestMockPreCommitVoteCase3(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -516,6 +592,9 @@ func TestMockPreCommitVoteCase3(t *testing.T) {
 				return payload, true
 			}
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -523,6 +602,10 @@ func TestMockPreCommitVoteCase3(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitVoteCase4
@@ -537,8 +620,10 @@ func TestMockPreCommitVoteCase4(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -572,6 +657,9 @@ func TestMockPreCommitVoteCase4(t *testing.T) {
 				return payload, true
 			}
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -579,6 +667,10 @@ func TestMockPreCommitVoteCase4(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitVoteCase5
@@ -593,8 +685,10 @@ func TestMockPreCommitVoteCase5(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -628,6 +722,9 @@ func TestMockPreCommitVoteCase5(t *testing.T) {
 				return payload, true
 			}
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -635,6 +732,10 @@ func TestMockPreCommitVoteCase5(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPreCommitVoteCase6
@@ -649,8 +750,10 @@ func TestMockPreCommitVoteCase6(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -684,6 +787,9 @@ func TestMockPreCommitVoteCase6(t *testing.T) {
 				return payload, true
 			}
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -691,4 +797,8 @@ func TestMockPreCommitVoteCase6(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if !hasViewChange {
+		t.Fail()
+	}
 }
