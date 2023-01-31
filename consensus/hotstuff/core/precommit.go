@@ -11,7 +11,7 @@ import (
 //	broadcast Msg(pre-commit, ⊥, prepareQC )
 // ```
 // [NOTE] We follow HotStuff specifications strictly, so whole TreeNode is NOT sent
-func (c *core) handlePrepareVote(data *hs.Message) error {
+func (c *Core) handlePrepareVote(data *hs.Message) error {
 
 	var (
 		logger = c.newLogger()
@@ -65,7 +65,7 @@ func (c *core) handlePrepareVote(data *hs.Message) error {
 }
 
 // sendPreCommit leader send message of `prepareQC`
-func (c *core) sendPreCommit(prepareQC *hs.QuorumCert) {
+func (c *Core) sendPreCommit(prepareQC *hs.QuorumCert) {
 	logger := c.newLogger()
 
 	code := hs.MsgTypePreCommit
@@ -84,7 +84,7 @@ func (c *core) sendPreCommit(prepareQC *hs.QuorumCert) {
 //	prepareQC ← m.justify
 //	send voteMsg(pre-commit, m.justify.node, ⊥) to leader(curView)
 // ```
-func (c *core) handlePreCommit(data *hs.Message) error {
+func (c *Core) handlePreCommit(data *hs.Message) error {
 	var (
 		logger    = c.newLogger()
 		code      = data.Code
@@ -130,7 +130,7 @@ func (c *core) handlePreCommit(data *hs.Message) error {
 	return nil
 }
 
-func (c *core) acceptPrepareQC(prepareQC *hs.QuorumCert) error {
+func (c *Core) acceptPrepareQC(prepareQC *hs.QuorumCert) error {
 	if err := c.current.SetTreeNode(c.current.TreeNode()); err != nil {
 		return err
 	}

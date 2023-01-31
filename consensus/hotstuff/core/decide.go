@@ -15,7 +15,7 @@ import (
 //	commitQC ← QC(V )
 //	broadcast Msg(decide, ⊥, commitQC )
 // ```
-func (c *core) handleCommitVote(data *hs.Message) error {
+func (c *Core) handleCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
 		code   = data.Code
@@ -76,7 +76,7 @@ func (c *core) handleCommitVote(data *hs.Message) error {
 	return nil
 }
 
-func (c *core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
+func (c *Core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	logger := c.newLogger()
 
 	code := hs.MsgTypeDecide
@@ -95,7 +95,7 @@ func (c *core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 }
 
 // handleDecide repo receive MsgDecide and try to commit the final block.
-func (c *core) handleDecide(data *hs.Message) error {
+func (c *Core) handleDecide(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
 		code   = data.Code
@@ -182,7 +182,7 @@ func (c *core) handleDecide(data *hs.Message) error {
 	return nil
 }
 
-func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert) error {
+func (c *Core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert) error {
 	if err := c.current.SetSealedBlock(sealedBlock); err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert)
 	return nil
 }
 
-func (c *core) commit(sealedBlock *types.Block) error {
+func (c *Core) commit(sealedBlock *types.Block) error {
 	if lockedBlock := c.current.LockedBlock(); lockedBlock == nil {
 		return fmt.Errorf("locked block is nil")
 	} else if lockedBlock.Hash() != sealedBlock.Hash() {
@@ -220,7 +220,7 @@ func (c *core) commit(sealedBlock *types.Block) error {
 // signals should be related with sync header or body. in fact, we DONT need this function to start an new round,
 // because that the function `startNewRound` will sync header to preparing new consensus round args.
 // we just kept it here for backup.
-func (c *core) handleFinalCommitted(header *types.Header) error {
+func (c *Core) handleFinalCommitted(header *types.Header) error {
 	logger := c.newLogger()
 	if height := header.Number.Uint64(); height >= c.current.HeightU64() {
 		logger.Trace("handleFinalCommitted", "height", height)

@@ -10,7 +10,7 @@ import (
 )
 
 // sendPrepare leader send message of prepare(view, node, highQC)
-func (c *core) sendPrepare() {
+func (c *Core) sendPrepare() {
 
 	// filter incorrect proposer and state
 	if !c.IsProposer() || c.currentState() != hs.StateHighQC {
@@ -79,7 +79,7 @@ func (c *core) sendPrepare() {
 //	safeNode(m.node, m.justify) then
 //	send voteMsg(prepare, m.node, ⊥) to leader(curView)
 // ```
-func (c *core) handlePrepare(data *hs.Message) error {
+func (c *Core) handlePrepare(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
 		code   = data.Code
@@ -161,7 +161,7 @@ func (c *core) handlePrepare(data *hs.Message) error {
 }
 
 // proposer do not need execute block again after miner.worker commitNewWork.
-func (c *core) executeBlock(block *types.Block) error {
+func (c *Core) executeBlock(block *types.Block) error {
 	if c.IsProposer() {
 		c.current.executed = &consensus.ExecutedBlock{Block: block}
 		return nil
@@ -176,7 +176,7 @@ func (c *core) executeBlock(block *types.Block) error {
 }
 
 // remote node's parent should equals to highQC's node
-func (c *core) extend(node *hs.TreeNode, highQC *hs.QuorumCert) error {
+func (c *Core) extend(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 	if highQC == nil || highQC.View == nil {
 		return errInvalidQC
 	}
@@ -187,7 +187,7 @@ func (c *core) extend(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 }
 
 // proposal extend lockQC `OR` highQC.view > lockQC.view
-func (c *core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
+func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 	if highQC == nil || highQC.View == nil {
 		return errInvalidQC
 	}

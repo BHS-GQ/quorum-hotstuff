@@ -36,7 +36,7 @@ const (
 	hotstuffMsg = 0x11
 )
 
-func (s *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
+func (s *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	var data []byte
 	if err := msg.Decode(&data); err != nil {
 		return nil, common.Hash{}, errDecodeFailed
@@ -48,14 +48,14 @@ func (s *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 // HotStuff
 // For Quorum consensus framework
 // Protocol implements consensus.Engine.Protocol
-func (sb *backend) Protocol() consensus.Protocol {
+func (sb *Backend) Protocol() consensus.Protocol {
 	return consensus.HotstuffProtocol
 }
 
 // /HotStuff
 
 // HandleMsg implements consensus.Handler.HandleMsg
-func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+func (s *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if msg.Code == hotstuffMsg {
@@ -120,15 +120,15 @@ func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (s *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
+func (s *Backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	s.broadcaster = broadcaster
 }
 
-func (s *backend) GetBroadcaster() consensus.Broadcaster {
+func (s *Backend) GetBroadcaster() consensus.Broadcaster {
 	return s.broadcaster
 }
 
-func (s *backend) NewChainHead(header *types.Header) error {
+func (s *Backend) NewChainHead(header *types.Header) error {
 	s.coreMu.RLock()
 	defer s.coreMu.RUnlock()
 	if !s.coreStarted {
@@ -138,6 +138,6 @@ func (s *backend) NewChainHead(header *types.Header) error {
 	return nil
 }
 
-func (s *backend) SubscribeBlock(ch chan<- consensus.ExecutedBlock) event.Subscription {
+func (s *Backend) SubscribeBlock(ch chan<- consensus.ExecutedBlock) event.Subscription {
 	return s.executeFeed.Subscribe(ch)
 }

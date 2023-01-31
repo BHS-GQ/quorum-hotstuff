@@ -4,7 +4,7 @@ import (
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) handleRequest(request *hs.Request) error {
+func (c *Core) handleRequest(request *hs.Request) error {
 	logger := c.newLogger()
 	if err := c.checkRequestMsg(request); err != nil {
 		if err == errInvalidMessage {
@@ -47,7 +47,7 @@ func (c *core) handleRequest(request *hs.Request) error {
 // return errInvalidMessage if the message is invalid
 // return errFutureMessage if the sequence of proposal is larger than current sequence
 // return errOldMessage if the sequence of proposal is smaller than current sequence
-func (c *core) checkRequestMsg(request *hs.Request) error {
+func (c *Core) checkRequestMsg(request *hs.Request) error {
 	if request == nil || request.Block == nil {
 		return errInvalidMessage
 	}
@@ -61,7 +61,7 @@ func (c *core) checkRequestMsg(request *hs.Request) error {
 	}
 }
 
-func (c *core) storeRequestMsg(request *hs.Request) {
+func (c *Core) storeRequestMsg(request *hs.Request) {
 	logger := c.newLogger()
 
 	logger.Trace("Store future request", "number", request.Block.Number(), "hash", request.Block.Hash())
@@ -72,7 +72,7 @@ func (c *core) storeRequestMsg(request *hs.Request) {
 	c.pendingRequests.Push(request, -request.Block.Number().Int64())
 }
 
-func (c *core) processPendingRequests() {
+func (c *Core) processPendingRequests() {
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
 

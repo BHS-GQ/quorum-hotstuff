@@ -12,18 +12,18 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func (c *core) currentView() *hs.View {
+func (c *Core) currentView() *hs.View {
 	return &hs.View{
 		Height: new(big.Int).Set(c.current.Height()),
 		Round:  new(big.Int).Set(c.current.Round()),
 	}
 }
 
-func (c *core) currentState() hs.State {
+func (c *Core) currentState() hs.State {
 	return c.current.State()
 }
 
-func (c *core) currentProposer() hs.Validator {
+func (c *Core) currentProposer() hs.Validator {
 	return c.valSet.GetProposer()
 }
 

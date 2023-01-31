@@ -8,7 +8,7 @@ import (
 )
 
 // Start implements core.Engine.Start
-func (c *core) Start() error {
+func (c *Core) Start() error {
 	c.isRunning = true
 	c.current = nil
 
@@ -22,7 +22,7 @@ func (c *core) Start() error {
 }
 
 // Stop implements core.Engine.Stop
-func (c *core) Stop() error {
+func (c *Core) Stop() error {
 	c.stopTimer()
 	c.unsubscribeEvents()
 	c.isRunning = false
@@ -30,15 +30,15 @@ func (c *core) Stop() error {
 	return nil
 }
 
-func (c *core) Address() common.Address {
+func (c *Core) Address() common.Address {
 	return c.signer.Address()
 }
 
-func (c *core) IsProposer() bool {
+func (c *Core) IsProposer() bool {
 	return c.valSet.IsProposer(c.backend.Address())
 }
 
-func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
+func (c *Core) IsCurrentProposal(blockHash common.Hash) bool {
 	if c.current == nil {
 		return false
 	}
@@ -51,7 +51,7 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	return false
 }
 
-func (c *core) CurrentSequence() (uint64, uint64) {
+func (c *Core) CurrentSequence() (uint64, uint64) {
 	view := c.currentView()
 	return view.HeightU64(), view.RoundU64()
 }
@@ -59,7 +59,7 @@ func (c *core) CurrentSequence() (uint64, uint64) {
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events
-func (c *core) subscribeEvents() {
+func (c *Core) subscribeEvents() {
 	c.events = c.backend.EventMux().Subscribe(
 		// external events
 		hs.RequestEvent{},
@@ -75,7 +75,7 @@ func (c *core) subscribeEvents() {
 	)
 }
 
-func (c *core) handleEvents() {
+func (c *Core) handleEvents() {
 	logger := c.logger.New("handleEvents")
 
 	for {
@@ -118,11 +118,11 @@ func (c *core) handleEvents() {
 }
 
 // sendEvent sends events to mux
-func (c *core) sendEvent(ev interface{}) {
+func (c *Core) sendEvent(ev interface{}) {
 	c.backend.EventMux().Post(ev)
 }
 
-func (c *core) handleMsg(val common.Address, payload []byte) error {
+func (c *Core) handleMsg(val common.Address, payload []byte) error {
 	logger := c.logger.New()
 
 	// Decode Message and check its signature
@@ -143,7 +143,7 @@ func (c *core) handleMsg(val common.Address, payload []byte) error {
 	return c.handleCheckedMsg(msg)
 }
 
-func (c *core) handleCheckedMsg(msg *hs.Message) (err error) {
+func (c *Core) handleCheckedMsg(msg *hs.Message) (err error) {
 	if c.current == nil {
 		c.logger.Error("engine state not prepared...")
 		return
@@ -177,20 +177,20 @@ func (c *core) handleCheckedMsg(msg *hs.Message) (err error) {
 	return
 }
 
-func (c *core) handleTimeoutMsg() {
+func (c *Core) handleTimeoutMsg() {
 	c.logger.Trace("handleTimeout", "state", c.currentState(), "view", c.currentView())
 	round := new(big.Int).Add(c.current.Round(), common.Big1)
 	c.startNewRound(round)
 }
 
 // Unsubscribe all events
-func (c *core) unsubscribeEvents() {
+func (c *Core) unsubscribeEvents() {
 	c.events.Unsubscribe()
 	c.timeoutSub.Unsubscribe()
 	c.finalCommittedSub.Unsubscribe()
 }
 
-func (c *core) broadcast(code hs.MsgType, payload []byte) {
+func (c *Core) broadcast(code hs.MsgType, payload []byte) {
 	logger := c.logger.New("state", c.currentState())
 
 	// Forbid non-validator nodest to send message to leader
@@ -224,7 +224,7 @@ func (c *core) broadcast(code hs.MsgType, payload []byte) {
 	}
 }
 
-func (c *core) finalizeMessage(msg *hs.Message) ([]byte, error) {
+func (c *Core) finalizeMessage(msg *hs.Message) ([]byte, error) {
 	var (
 		sig     []byte
 		msgHash common.Hash

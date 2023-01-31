@@ -9,7 +9,7 @@ import (
 // mechanisms of the HotStuff scheme.
 type API struct {
 	chain    consensus.ChainHeaderReader
-	hotstuff *backend
+	hotstuff *Backend
 }
 
 // Proposals returns the current proposals the node tries to uphold and vote on.

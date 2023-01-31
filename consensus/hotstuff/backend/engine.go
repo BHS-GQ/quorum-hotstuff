@@ -28,15 +28,15 @@ var (
 	now               = time.Now
 )
 
-func (s *backend) Author(header *types.Header) (common.Address, error) {
+func (s *Backend) Author(header *types.Header) (common.Address, error) {
 	return s.signer.RecoverSigner(header)
 }
 
-func (s *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+func (s *Backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
 	return s.verifyHeader(chain, header, nil, seal)
 }
 
-func (s *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (s *Backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 	go func() {
@@ -57,14 +57,14 @@ func (s *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*ty
 	return abort, results
 }
 
-func (s *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+func (s *Backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
 		return errInvalidUncleHash
 	}
 	return nil
 }
 
-func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+func (s *Backend) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// unused fields, force to set to empty
 	header.Coinbase = s.Address()
 	header.Nonce = emptyNonce
@@ -96,13 +96,13 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	return nil
 }
 
-func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
+func (s *Backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
 	// No block rewards in HotStuff, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 }
 
-func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (s *Backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	/// No block rewards in HotStuff, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -112,7 +112,7 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil)), nil
 }
 
-func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
+func (s *Backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	number := header.Number.Uint64()
@@ -168,7 +168,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	return nil
 }
 
-func (s *backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
+func (s *Backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	number := header.Number.Uint64()
@@ -197,16 +197,16 @@ func (s *backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block
 	return nil
 }
 
-func (s *backend) SealHash(header *types.Header) common.Hash {
+func (s *Backend) SealHash(header *types.Header) common.Hash {
 	return s.signer.HeaderHash(header)
 }
 
 // useless
-func (s *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
+func (s *Backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return new(big.Int)
 }
 
-func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
+func (s *Backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "HotStuff",
 		Version:   "1.0",
@@ -216,7 +216,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.HotStuff.Start
-func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error {
+func (s *Backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if s.coreStarted {
@@ -243,7 +243,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 }
 
 // Stop implements consensus.HotStuff.Stop
-func (s *backend) Stop() error {
+func (s *Backend) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
@@ -256,7 +256,7 @@ func (s *backend) Stop() error {
 	return nil
 }
 
-func (s *backend) Close() error {
+func (s *Backend) Close() error {
 	return nil
 }
 
@@ -264,7 +264,7 @@ func (s *backend) Close() error {
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
+func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}

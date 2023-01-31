@@ -11,7 +11,7 @@ import (
 //	broadcast Msg(commit, ⊥, precommitQC )
 // ```
 // [NOTE] We follow HotStuff specifications strictly, so whole TreeNode is NOT sent
-func (c *core) handlePreCommitVote(data *hs.Message) error {
+func (c *Core) handlePreCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
 		code   = data.Code
@@ -61,7 +61,7 @@ func (c *core) handlePreCommitVote(data *hs.Message) error {
 	return nil
 }
 
-func (c *core) sendCommit(lockQC *hs.QuorumCert) {
+func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 	logger := c.newLogger()
 
 	code := hs.MsgTypeCommit
@@ -80,7 +80,7 @@ func (c *core) sendCommit(lockQC *hs.QuorumCert) {
 //	lockedQC ← m.justify
 //	send voteMsg(commit, m.justify.node, ⊥) to leader(curView)
 // ```
-func (c *core) handleCommit(data *hs.Message) error {
+func (c *Core) handleCommit(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
 		code   = data.Code
@@ -127,7 +127,7 @@ func (c *core) handleCommit(data *hs.Message) error {
 	return nil
 }
 
-func (c *core) acceptLockQC(qc *hs.QuorumCert) error {
+func (c *Core) acceptLockQC(qc *hs.QuorumCert) error {
 	if err := c.current.Lock(qc); err != nil {
 		return err
 	}

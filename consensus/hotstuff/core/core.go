@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-type core struct {
+type Core struct {
 	db     ethdb.Database
 	config *hs.Config
 	logger log.Logger
@@ -41,8 +41,8 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Database, valSet hs.ValidatorSet) *core {
-	c := &core{
+func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Database, valSet hs.ValidatorSet) *Core {
+	c := &Core{
 		db:                db,
 		config:            config,
 		backend:           backend,
@@ -58,7 +58,7 @@ func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Datab
 	return c
 }
 
-func (c *core) startNewRound(round *big.Int) {
+func (c *Core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
 
 	if !c.isRunning {
@@ -132,7 +132,7 @@ func (c *core) startNewRound(round *big.Int) {
 
 }
 
-func (c *core) updateRoundState(lastProposal *types.Block, newView *hs.View) error {
+func (c *Core) updateRoundState(lastProposal *types.Block, newView *hs.View) error {
 	if c.current == nil {
 		c.current = newRoundState(c.db, c.logger.New(), c.valSet, lastProposal, newView)
 		c.current.reload(newView)
@@ -163,7 +163,7 @@ func (c *core) updateRoundState(lastProposal *types.Block, newView *hs.View) err
 }
 
 // setCurrentState handle backlog message after round state settled.
-func (c *core) setCurrentState(s hs.State) {
+func (c *Core) setCurrentState(s hs.State) {
 	c.current.SetState(s)
 	if s == hs.StateAcceptRequest || s == hs.StateHighQC {
 		c.processPendingRequests()
@@ -171,6 +171,6 @@ func (c *core) setCurrentState(s hs.State) {
 	c.processBacklog()
 }
 
-func (c *core) checkValidatorSignature(hash common.Hash, sig []byte) (common.Address, error) {
+func (c *Core) checkValidatorSignature(hash common.Hash, sig []byte) (common.Address, error) {
 	return c.signer.CheckSignature(c.valSet, hash, sig)
 }

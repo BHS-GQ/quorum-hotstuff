@@ -45,7 +45,7 @@ const (
 )
 
 // HotStuff is the scalable hotstuff consensus engine
-type backend struct {
+type Backend struct {
 	config       *hs.Config
 	db           ethdb.Database // Database to store and retrieve necessary information
 	core         hs.CoreEngine
@@ -84,13 +84,13 @@ func New(
 	db ethdb.Database,
 	valset hs.ValidatorSet,
 	blsInfo *types.BLSInfo,
-) *backend {
+) *Backend {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
 	signer := snr.NewSigner(privateKey, byte(hs.MsgTypePrepareVote), blsInfo)
-	backend := &backend{
+	backend := &Backend{
 		config:         config,
 		db:             db,
 		logger:         log.New(),
@@ -110,22 +110,22 @@ func New(
 }
 
 // Address implements hs.Backend.Address
-func (s *backend) Address() common.Address {
+func (s *Backend) Address() common.Address {
 	return s.signer.Address()
 }
 
 // Validators implements hs.Backend.Validators
-func (s *backend) Validators() hs.ValidatorSet {
+func (s *Backend) Validators() hs.ValidatorSet {
 	return s.snap()
 }
 
 // EventMux implements hs.Backend.EventMux
-func (s *backend) EventMux() *event.TypeMux {
+func (s *Backend) EventMux() *event.TypeMux {
 	return s.eventMux
 }
 
 // Broadcast implements hs.Backend.Broadcast
-func (s *backend) Broadcast(valSet hs.ValidatorSet, payload []byte) error {
+func (s *Backend) Broadcast(valSet hs.ValidatorSet, payload []byte) error {
 	// send to others
 	if err := s.Gossip(valSet, payload); err != nil {
 		return err
@@ -140,7 +140,7 @@ func (s *backend) Broadcast(valSet hs.ValidatorSet, payload []byte) error {
 }
 
 // Broadcast implements hs.Backend.Gossip
-func (s *backend) Gossip(valSet hs.ValidatorSet, payload []byte) error {
+func (s *Backend) Gossip(valSet hs.ValidatorSet, payload []byte) error {
 	hash := hs.RLPHash(payload)
 	s.knownMessages.Add(hash, true)
 
@@ -174,7 +174,7 @@ func (s *backend) Gossip(valSet hs.ValidatorSet, payload []byte) error {
 }
 
 // Unicast implements hs.Backend.Unicast
-func (s *backend) Unicast(valSet hs.ValidatorSet, payload []byte) error {
+func (s *Backend) Unicast(valSet hs.ValidatorSet, payload []byte) error {
 	msg := hs.MessageEvent{Src: s.Address(), Payload: payload}
 	leader := valSet.GetProposer()
 	target := leader.Address()
@@ -214,7 +214,7 @@ func (s *backend) Unicast(valSet hs.ValidatorSet, payload []byte) error {
 
 // SealBlock seals block within consensus by
 // adding PrepareQC BLS AggSig to block header
-func (s *backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types.Block, error) {
+func (s *Backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types.Block, error) {
 
 	// check proposal
 	h := block.Header()
@@ -234,7 +234,7 @@ func (s *backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types
 	return block.WithSeal(h), nil
 }
 
-func (s *backend) Commit(executed *consensus.ExecutedBlock) error {
+func (s *Backend) Commit(executed *consensus.ExecutedBlock) error {
 	block := executed.Block
 
 	if executed == nil || executed.Block == nil {
@@ -262,7 +262,7 @@ func (s *backend) Commit(executed *consensus.ExecutedBlock) error {
 }
 
 // Verify implements hs.Backend.Verify
-func (s *backend) Verify(block *types.Block) (time.Duration, error) {
+func (s *Backend) Verify(block *types.Block) (time.Duration, error) {
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
 		return 0, core.ErrBlacklistedHash
@@ -288,7 +288,7 @@ func (s *backend) Verify(block *types.Block) (time.Duration, error) {
 	return 0, err
 }
 
-func (s *backend) LastProposal() (*types.Block, common.Address) {
+func (s *Backend) LastProposal() (*types.Block, common.Address) {
 	var (
 		proposer common.Address
 		err      error
@@ -311,12 +311,12 @@ func (s *backend) LastProposal() (*types.Block, common.Address) {
 }
 
 // HasProposal implements hs.Backend.HashBlock
-func (s *backend) HasProposal(hash common.Hash, number *big.Int) bool {
+func (s *Backend) HasProposal(hash common.Hash, number *big.Int) bool {
 	return s.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
 // GetSpeaker implements hs.Backend.GetProposer
-func (s *backend) GetProposer(number uint64) common.Address {
+func (s *Backend) GetProposer(number uint64) common.Address {
 	if header := s.chain.GetHeaderByNumber(number); header != nil {
 		a, _ := s.Author(header)
 		return a
@@ -324,14 +324,14 @@ func (s *backend) GetProposer(number uint64) common.Address {
 	return common.Address{}
 }
 
-func (s *backend) HasBadProposal(hash common.Hash) bool {
+func (s *Backend) HasBadProposal(hash common.Hash) bool {
 	if s.hasBadBlock == nil {
 		return false
 	}
 	return s.hasBadBlock(s.db, hash)
 }
 
-func (s *backend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
+func (s *Backend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
 	state, receipts, allLogs, err := s.chain.ExecuteBlock(block)
 	if err != nil {
 		return nil, err

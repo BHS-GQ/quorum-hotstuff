@@ -8,7 +8,7 @@ import (
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) storeBacklog(msg *hs.Message) {
+func (c *Core) storeBacklog(msg *hs.Message) {
 	logger := c.newLogger()
 
 	src := msg.Address
@@ -26,7 +26,7 @@ func (c *core) storeBacklog(msg *hs.Message) {
 	c.backlogs.Push(msg)
 }
 
-func (c *core) processBacklog() {
+func (c *Core) processBacklog() {
 	logger := c.newLogger()
 
 	c.backlogs.mu.Lock()

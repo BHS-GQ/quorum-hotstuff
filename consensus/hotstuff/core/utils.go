@@ -12,11 +12,11 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func (c *core) proposer() common.Address {
+func (c *Core) proposer() common.Address {
 	return c.valSet.GetProposer().Address()
 }
 
-func (c *core) HeightU64() uint64 {
+func (c *Core) HeightU64() uint64 {
 	if c.current == nil {
 		return 0
 	} else {
@@ -24,7 +24,7 @@ func (c *core) HeightU64() uint64 {
 	}
 }
 
-func (c *core) RoundU64() uint64 {
+func (c *Core) RoundU64() uint64 {
 	if c.current == nil {
 		return 0
 	} else {
@@ -43,7 +43,7 @@ func (c *core) RoundU64() uint64 {
 // todo(fuk):if the view is equal the current view, compare the Message type and round state, with the right
 // round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
 // state is `future Message`. Message type and round state table as follow:
-func (c *core) checkView(view *hs.View) error {
+func (c *Core) checkView(view *hs.View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
@@ -63,12 +63,12 @@ func (c *core) checkView(view *hs.View) error {
 	}
 }
 
-func (c *core) newLogger() log.Logger {
+func (c *Core) newLogger() log.Logger {
 	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
 	return logger
 }
 
-func (c *core) checkMsgDest() error {
+func (c *Core) checkMsgDest() error {
 	if !c.IsProposer() {
 		return errNotToProposer
 	}
@@ -76,7 +76,7 @@ func (c *core) checkMsgDest() error {
 }
 
 // verifyQC check and validate qc.
-func (c *core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
+func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	if qc == nil || qc.View == nil {
 		return fmt.Errorf("qc or qc.View is nil")
 	}
@@ -177,7 +177,7 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 }
 
 // sendVote repo send kinds of vote to leader, use `current.node` after repo `prepared`.
-func (c *core) sendVote(code hs.MsgType) {
+func (c *Core) sendVote(code hs.MsgType) {
 	logger := c.newLogger()
 
 	// Fetch and sign vote
@@ -208,7 +208,7 @@ func (c *core) sendVote(code hs.MsgType) {
 	logger.Trace(prefix, "msg", code, "hash", vote)
 }
 
-func (c *core) checkMsgSource(src common.Address) error {
+func (c *Core) checkMsgSource(src common.Address) error {
 	if !c.valSet.IsProposer(src) {
 		return errNotFromProposer
 	}
@@ -216,7 +216,7 @@ func (c *core) checkMsgSource(src common.Address) error {
 }
 
 // checkNode repo compare remote node with local node
-func (c *core) checkNode(node *hs.TreeNode, compare bool) error {
+func (c *Core) checkNode(node *hs.TreeNode, compare bool) error {
 	if node == nil || node.Parent == hs.EmptyHash ||
 		node.Block == nil || node.Block.Header() == nil {
 		return errInvalidNode
@@ -241,7 +241,7 @@ func (c *core) checkNode(node *hs.TreeNode, compare bool) error {
 
 // checkBlock check the extend relationship between remote block and latest chained block.
 // ensure that the remote block equals to locked block if it exist.
-func (c *core) checkBlock(block *types.Block) error {
+func (c *Core) checkBlock(block *types.Block) error {
 	lastChainedBlock := c.current.LastChainedBlock()
 	if lastChainedBlock.NumberU64()+1 != block.NumberU64() {
 		return fmt.Errorf("expect block number %v, got %v", lastChainedBlock.NumberU64()+1, block.NumberU64())
@@ -263,7 +263,7 @@ func (c *core) checkBlock(block *types.Block) error {
 }
 
 // checkVote vote should equal to current round state
-func (c *core) checkVote(vote *hs.Vote, code hs.MsgType) error {
+func (c *Core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 	// [TODO] Can we check if partial signature is valid?
 	// YES! With bls.Verify()
 
@@ -295,7 +295,7 @@ func (c *core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 }
 
 // assemble messages to quorum cert.
-func (c *core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
+func (c *Core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
 	var msgs []*hs.Message
 	switch code {
 	case hs.MsgTypePrepareVote:
@@ -362,6 +362,6 @@ func (c *core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
 	return qc, nil
 }
 
-func (c *core) Q() int {
+func (c *Core) Q() int {
 	return c.valSet.Q()
 }

@@ -5,7 +5,7 @@ import hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 // sendNewView, repo send message of new-view, formula as follow:
 // 	MSG(new-view, _, prepareQC)
 // the field of view will be packaged in message before broadcast.
-func (c *core) sendNewView() {
+func (c *Core) sendNewView() {
 	logger := c.newLogger()
 	code := hs.MsgTypeNewView
 
@@ -22,7 +22,7 @@ func (c *core) sendNewView() {
 
 // handleNewView, leader gather new-view messages and pick the max `prepareQC` to be `highQC` by view sequence.
 // `hs.stateHighQC` denote that node is ready to pack block to send the `prepare` message.
-func (c *core) handleNewView(data *hs.Message) error {
+func (c *Core) handleNewView(data *hs.Message) error {
 	var (
 		logger    = c.newLogger()
 		prepareQC *hs.QuorumCert
@@ -74,7 +74,7 @@ func (c *core) handleNewView(data *hs.Message) error {
 }
 
 // getHighQC leader find the highest `prepareQC` as highQC by `view` sequence.
-func (c *core) getHighQC() (*hs.QuorumCert, error) {
+func (c *Core) getHighQC() (*hs.QuorumCert, error) {
 	var highQC *hs.QuorumCert
 	for _, data := range c.current.NewViews() {
 		var qc *hs.QuorumCert

@@ -13,7 +13,7 @@ import (
 // the waiting time in every round is greater than the last one, so that all nodes can catch up
 // the same round.
 
-func (c *core) newRoundChangeTimer() {
+func (c *Core) newRoundChangeTimer() {
 	c.stopTimer()
 
 	// set timeout based on the round number
@@ -27,7 +27,7 @@ func (c *core) newRoundChangeTimer() {
 	})
 }
 
-func (c *core) stopTimer() {
+func (c *Core) stopTimer() {
 	if c.roundChangeTimer != nil {
 		c.roundChangeTimer.Stop()
 	}
