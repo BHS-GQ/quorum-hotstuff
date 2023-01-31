@@ -47,7 +47,7 @@ func (c *Core) handlePrepareVote(data *hs.Message) error {
 	logger.Trace("handlePrepareVote", "msg", code, "src", src, "vote", vote)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() == hs.StateHighQC {
-		prepareQC, err := c.messages2qc(code)
+		prepareQC, err := c.messagesToQC(code)
 		if err != nil {
 			logger.Trace("Failed to assemble prepareQC", "msg", code, "err", err)
 			return errInvalidQC

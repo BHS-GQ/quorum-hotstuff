@@ -45,7 +45,7 @@ func (c *Core) handlePreCommitVote(data *hs.Message) error {
 	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < hs.StatePreCommitted {
-		lockQC, err := c.messages2qc(code)
+		lockQC, err := c.messagesToQC(code)
 		if err != nil {
 			logger.Trace("Failed to assemble lockQC", "msg", code, "err", err)
 			return err

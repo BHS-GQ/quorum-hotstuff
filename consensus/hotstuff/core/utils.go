@@ -294,9 +294,12 @@ func (c *Core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 	return nil
 }
 
-// assemble messages to quorum cert.
-func (c *Core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
-	var msgs []*hs.Message
+func (c *Core) GetMessages(code hs.MsgType) ([]*hs.Message, error) {
+	var (
+		msgs []*hs.Message
+		err  error
+	)
+
 	switch code {
 	case hs.MsgTypePrepareVote:
 		msgs = c.current.PrepareVotes()
@@ -307,19 +310,42 @@ func (c *Core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
 	default:
 		return nil, errInvalidCode
 	}
+
+	return msgs, err
+}
+
+func (c *Core) GetMessageVotes(msgs []*hs.Message) []*hs.Vote {
+	votes := make([]*hs.Vote, len(msgs))
+
+	for i, msg := range msgs {
+		msg.Decode(&votes[i])
+	}
+
+	return votes
+}
+
+func (c *Core) messagesToQC(code hs.MsgType) (*hs.QuorumCert, error) {
+	var (
+		msgs  []*hs.Message
+		votes []*hs.Vote
+		err   error
+	)
+
+	if msgs, err = c.GetMessages(code); err != nil {
+		return nil, err
+	}
+
 	if len(msgs) == 0 {
 		return nil, fmt.Errorf("assemble qc: not enough message")
 	}
 
-	// Aggregated signatures from votes
-	// Note that votes were checked in
-	//   their respective handle<State>Vote() functions
+	votes = c.GetMessageVotes(msgs)
+
 	var (
 		proposer     = c.proposer()
 		view         = c.currentView()
 		expectedVote = c.current.UnsignedVote(code)
 		sigShares    = make([][]byte, 0)
-		signedVote   *hs.Vote
 	)
 
 	expectedVoteBytes, err := hs.Encode(expectedVote)
@@ -335,21 +361,8 @@ func (c *Core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
 		BLSSignature: []byte{},
 	}
 
-	// [TODO] Very inefficient; change in a later version
-	for _, msg := range msgs {
-
-		// [TODO] Remove redundant vote-checking
-		msg.Decode(&signedVote)
-		voteBytes, err := hs.Encode(signedVote.Unsigned())
-		if err != nil {
-			return nil, fmt.Errorf("could not encode vote")
-		}
-		if !bytes.Equal(expectedVoteBytes, voteBytes) {
-			return nil, fmt.Errorf("vote from address %s does not match expected vote", msg.Address)
-		}
-
-		// Compile signatures
-		sigShares = append(sigShares, signedVote.BLSSignature)
+	for _, vote := range votes {
+		sigShares = append(sigShares, vote.BLSSignature)
 	}
 
 	// Get aggregated signature for QC
@@ -360,6 +373,7 @@ func (c *Core) messages2qc(code hs.MsgType) (*hs.QuorumCert, error) {
 	qc.BLSSignature = aggSig
 
 	return qc, nil
+
 }
 
 func (c *Core) Q() int {
