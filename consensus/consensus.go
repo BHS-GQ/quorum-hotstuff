@@ -167,9 +167,6 @@ type Istanbul interface {
 type HotStuff interface {
 	Engine
 
-	// MockSeal is the Seal() function called in the mock system
-	MockSeal(chain ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error
-
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error
 
