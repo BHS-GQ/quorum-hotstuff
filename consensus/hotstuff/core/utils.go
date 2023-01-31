@@ -373,5 +373,4 @@ func (c *Core) messagesToQC(code hs.MsgType) (*hs.QuorumCert, error) {
 	qc.BLSSignature = aggSig
 
 	return qc, nil
-
 }
