@@ -25,7 +25,7 @@ type Geth struct {
 	miner       *miner
 	chain       *core.BlockChain
 	engine      Engine
-	hotstuff    consensus.HotStuff
+	hotstuff    consensus.MockHotStuff
 	api         *backend.API
 	broadcaster *broadcaster
 	signer      hs.Signer
@@ -40,7 +40,7 @@ func MakeGeth(
 	db := rawdb.NewMemoryDatabase()
 	engine := makeEngine(privateKey, db, vals, blsInfo)
 	chain := makeChain(db, engine, vals)
-	hotstuffEngine := engine.(consensus.HotStuff)
+	hotstuffEngine := engine.(consensus.MockHotStuff)
 	broadcaster := engine.(consensus.Handler).GetBroadcaster().(*broadcaster)
 	api := engine.APIs(chain)[0].Service.(*backend.API)
 	miner := makeMiner(broadcaster.addr, chain, hotstuffEngine)

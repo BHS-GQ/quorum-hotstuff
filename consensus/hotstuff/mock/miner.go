@@ -49,7 +49,7 @@ type task struct {
 	block    *types.Block
 }
 
-func makeMiner(address common.Address, chain *core.BlockChain, engine consensus.HotStuff) *miner {
+func makeMiner(address common.Address, chain *core.BlockChain, engine consensus.MockHotStuff) *miner {
 	miner := &miner{
 		addr:         address,
 		chain:        chain,
