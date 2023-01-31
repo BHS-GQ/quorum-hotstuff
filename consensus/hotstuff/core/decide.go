@@ -53,7 +53,7 @@ func (c *Core) handleCommitVote(data *hs.Message) error {
 	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote)
 
 	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
-	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() == hs.StatePreCommitted {
+	if size := c.current.CommitVoteSize(); size >= c.valSet.Q() && c.currentState() == hs.StatePreCommitted {
 		commitQC, err := c.messagesToQC(code)
 		if err != nil {
 			logger.Trace("Failed to assemble commitQC", "msg", code, "err", err)

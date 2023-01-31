@@ -375,7 +375,3 @@ func (c *Core) messagesToQC(code hs.MsgType) (*hs.QuorumCert, error) {
 	return qc, nil
 
 }
-
-func (c *Core) Q() int {
-	return c.valSet.Q()
-}

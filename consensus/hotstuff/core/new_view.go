@@ -57,7 +57,7 @@ func (c *Core) handleNewView(data *hs.Message) error {
 
 	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.TreeNode)
 
-	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < hs.StateHighQC {
+	if size := c.current.NewViewSize(); size >= c.valSet.Q() && c.currentState() < hs.StateHighQC {
 		highQC, err := c.getHighQC()
 		if err != nil {
 			logger.Trace("Failed to get highQC", "msg", code, "err", err)
