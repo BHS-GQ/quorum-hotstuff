@@ -129,10 +129,6 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err, "highQC", highQC)
 		return err
 	}
-	if err := c.extend(node, highQC); err != nil {
-		logger.Trace("Failed to check extend", "msg", code, "src", src, "err", err)
-		return errExtend
-	}
 	if err := c.safeNode(node, highQC); err != nil {
 		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
 		return errSafeNode
@@ -175,23 +171,16 @@ func (c *Core) executeBlock(block *types.Block) error {
 	return nil
 }
 
-// remote node's parent should equals to highQC's node
-func (c *Core) extend(node *hs.TreeNode, highQC *hs.QuorumCert) error {
+func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
+	// TODO: Safety
 	if highQC == nil || highQC.View == nil {
 		return errInvalidQC
 	}
 	if highQC.TreeNode != node.Parent {
 		return fmt.Errorf("expect parent %v, got %v", highQC.TreeNode, node.Parent)
 	}
-	return nil
-}
 
-// proposal extend lockQC `OR` highQC.view > lockQC.view
-func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
-	if highQC == nil || highQC.View == nil {
-		return errInvalidQC
-	}
-
+	// Liveliness
 	// skip epoch start block
 	lockQC := c.current.LockQC()
 	if lockQC == nil {
@@ -199,7 +188,7 @@ func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 		return nil
 	}
 
-	if highQC.View.Cmp(lockQC.View) > 0 || node.Parent == lockQC.TreeNode {
+	if highQC.View.Cmp(lockQC.View) > 0 {
 		return nil
 	}
 
