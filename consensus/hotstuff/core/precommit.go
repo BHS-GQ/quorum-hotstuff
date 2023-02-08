@@ -131,9 +131,6 @@ func (c *Core) handlePreCommit(data *hs.Message) error {
 }
 
 func (c *Core) acceptPrepareQC(prepareQC *hs.QuorumCert) error {
-	if err := c.current.SetTreeNode(c.current.TreeNode()); err != nil {
-		return err
-	}
 	if err := c.current.SetPrepareQC(prepareQC); err != nil {
 		return err
 	}

@@ -27,11 +27,6 @@ func (c *Core) currentProposer() hs.Validator {
 	return c.valSet.GetProposer()
 }
 
-type roundNode struct {
-	temp *hs.TreeNode // cache node before `prepared`
-	node *hs.TreeNode
-}
-
 type roundState struct {
 	db     ethdb.Database
 	logger log.Logger
@@ -43,7 +38,7 @@ type roundState struct {
 
 	lastChainedBlock *types.Block
 	pendingRequest   *hs.Request
-	node             *roundNode
+	node             *hs.TreeNode
 	lockedBlock      *types.Block // validator's prepare proposal
 	executed         *consensus.ExecutedBlock
 	proposalLocked   bool
@@ -69,7 +64,7 @@ func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hs.Validat
 		round:            view.Round,
 		height:           view.Height,
 		state:            hs.StateAcceptRequest,
-		node:             new(roundNode),
+		node:             new(hs.TreeNode),
 		lastChainedBlock: lastChainedBlock,
 		newViews:         NewMessageSet(validatorSet),
 		prepareVotes:     NewMessageSet(validatorSet),
@@ -144,41 +139,28 @@ func (s *roundState) SetTreeNode(node *hs.TreeNode) error {
 		return errInvalidNode
 	}
 
-	if temp := s.node.temp; temp == nil {
-		s.node.temp = node
-		return nil
-	} else {
-		if err := s.storeNode(node); err != nil {
-			return err
-		}
-		s.node.node = node
-		s.node.temp = nil
-	}
+	s.node = node
 	return nil
 }
 
 func (s *roundState) TreeNode() *hs.TreeNode {
-	if temp := s.node.temp; temp != nil {
-		return temp
-	} else {
-		return s.node.node
-	}
+	return s.node
 }
 
 func (s *roundState) Lock(qc *hs.QuorumCert) error {
-	if s.node == nil || s.node.node == nil {
+	if s.node == nil || s.node == nil {
 		return errInvalidNode
 	}
 
 	if err := s.storeLockQC(qc); err != nil {
 		return err
 	}
-	if err := s.storeNode(s.node.node); err != nil {
+	if err := s.storeNode(s.node); err != nil {
 		return err
 	}
 
 	s.lockQC = qc
-	s.lockedBlock = s.node.node.Block
+	s.lockedBlock = s.node.Block
 	s.proposalLocked = true
 	return nil
 }
@@ -192,7 +174,7 @@ func (s *roundState) Unlock() error {
 	s.pendingRequest = nil
 	s.proposalLocked = false
 	s.lockedBlock = nil
-	s.node.temp = nil
+	s.node = nil
 	s.executed = nil
 	return nil
 }
@@ -205,14 +187,14 @@ func (s *roundState) LockedBlock() *types.Block {
 }
 
 func (s *roundState) SetSealedBlock(block *types.Block) error {
-	if s.node.node == nil || s.node.node.Block == nil {
+	if s.node == nil || s.node.Block == nil {
 		return fmt.Errorf("locked block is nil")
 	}
-	if s.node.node.Block.Hash() != block.Hash() {
-		return fmt.Errorf("node block not equal to multi-seal block %s vs. %s", s.node.node.Block.Hash().String(), block.Hash().String())
+	if s.node.Block.Hash() != block.Hash() {
+		return fmt.Errorf("node block not equal to multi-seal block %s vs. %s", s.node.Block.Hash().String(), block.Hash().String())
 	}
-	s.node.node.Block = block
-	if err := s.storeNode(s.node.node); err != nil {
+	s.node.Block = block
+	if err := s.storeNode(s.node); err != nil {
 		return err
 	}
 	s.lockedBlock = block
@@ -368,8 +350,8 @@ func (s *roundState) reload(view *hs.View) {
 	}
 
 	// reset locked node
-	if s.lockQC != nil && s.node.node != nil && s.node.node.Block != nil && s.lockQC.TreeNode == s.node.node.Hash() {
-		s.lockedBlock = s.node.node.Block
+	if s.lockQC != nil && s.node != nil && s.node.Block != nil && s.lockQC.TreeNode == s.node.Hash() {
+		s.lockedBlock = s.node.Block
 		s.proposalLocked = true
 	}
 }
@@ -518,7 +500,7 @@ func (s *roundState) loadNode() error {
 	if err = rlp.DecodeBytes(raw, data); err != nil {
 		return err
 	}
-	s.node.node = data
+	s.node = data
 	return nil
 }
 
