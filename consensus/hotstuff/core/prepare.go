@@ -54,8 +54,8 @@ func (c *Core) sendPrepare() {
 	// assemble message as formula: MSG(view, node, prepareQC)
 	parent := highQC.TreeNode
 	node := hs.NewTreeNode(parent, block)
-	prepare := hs.NewPackagedQC(node, highQC)
-	payload, err := hs.Encode(prepare)
+	prepareSubject := hs.NewPackagedQC(node, highQC)
+	payload, err := hs.Encode(prepareSubject)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", code, "err", err)
 		return
@@ -81,14 +81,14 @@ func (c *Core) sendPrepare() {
 // ```
 func (c *Core) handlePrepare(data *hs.Message) error {
 	var (
-		logger = c.newLogger()
-		code   = data.Code
-		src    = data.Address
-		msg    *hs.PackagedQC
+		logger  = c.newLogger()
+		code    = data.Code
+		src     = data.Address
+		subject *hs.PackagedQC
 	)
 
 	// check message
-	if err := data.Decode(&msg); err != nil {
+	if err := data.Decode(&subject); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePrepare
 	}
@@ -102,7 +102,7 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	}
 
 	// local node is nil before `handlePrepare`, only check fields here.
-	node := msg.TreeNode
+	node := subject.TreeNode
 	if err := c.checkNode(node, false); err != nil {
 		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
 		return err
@@ -124,7 +124,7 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	}
 
 	// safety and liveness rules judgement.
-	highQC := msg.QC
+	highQC := subject.QC
 	if err := c.verifyQC(data, highQC); err != nil {
 		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err, "highQC", highQC)
 		return err
