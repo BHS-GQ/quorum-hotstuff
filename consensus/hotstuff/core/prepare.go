@@ -172,7 +172,7 @@ func (c *Core) executeBlock(block *types.Block) error {
 }
 
 func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
-	// TODO: Safety
+	// Data checks
 	if highQC == nil || highQC.View == nil {
 		return errInvalidQC
 	}
@@ -180,14 +180,18 @@ func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 		return fmt.Errorf("expect parent %v, got %v", highQC.TreeNode, node.Parent)
 	}
 
-	// Liveliness
-	// skip epoch start block
 	lockQC := c.current.LockQC()
 	if lockQC == nil {
 		c.logger.Warn("LockQC be nil should only happen at `startUp`")
 		return nil
 	}
 
+	// Safety
+	if lockQC.TreeNode == node.Parent {
+		return nil
+	}
+
+	// Liveliness
 	if highQC.View.Cmp(lockQC.View) > 0 {
 		return nil
 	}
