@@ -28,6 +28,10 @@ func (c *Core) handleCommitVote(data *hs.Message) error {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return err
 	}
+	if err := c.checkView(data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		return err
+	}
 	if err := c.checkMsgDest(); err != nil {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
