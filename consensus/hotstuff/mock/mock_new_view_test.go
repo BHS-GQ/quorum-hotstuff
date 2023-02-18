@@ -48,8 +48,10 @@ func TestMockNewViewCase1(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -92,6 +94,9 @@ func TestMockNewViewCase1(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -99,6 +104,10 @@ func TestMockNewViewCase1(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase2
@@ -113,8 +122,10 @@ func TestMockNewViewCase2(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -168,6 +179,9 @@ func TestMockNewViewCase2(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -175,6 +189,10 @@ func TestMockNewViewCase2(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase3
@@ -188,8 +206,10 @@ func TestMockNewViewCase3(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -232,6 +252,9 @@ func TestMockNewViewCase3(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", ori.Code, "view", view)
 			return data, false
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -239,6 +262,10 @@ func TestMockNewViewCase3(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase4
@@ -253,8 +280,10 @@ func TestMockNewViewCase4(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -308,6 +337,9 @@ func TestMockNewViewCase4(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -315,6 +347,10 @@ func TestMockNewViewCase4(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase5
@@ -328,8 +364,10 @@ func TestMockNewViewCase5(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -383,6 +421,9 @@ func TestMockNewViewCase5(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -390,6 +431,10 @@ func TestMockNewViewCase5(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase6
@@ -404,8 +449,10 @@ func TestMockNewViewCase6(t *testing.T) {
 	sys.Start()
 	time.Sleep(2 * time.Second)
 
+	hasViewChange := false
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
+		h, r := node.api.CurrentSequence()
+		if h == H && r == R {
 			if node.IsProposer() {
 				return data, true
 			}
@@ -459,6 +506,9 @@ func TestMockNewViewCase6(t *testing.T) {
 			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
+		if h == H && r == R+1 {
+			hasViewChange = true
+		}
 		return data, true
 	}
 
@@ -466,4 +516,8 @@ func TestMockNewViewCase6(t *testing.T) {
 		node.setHook(hook)
 	}
 	sys.Close(10)
+
+	if hasViewChange {
+		t.Fail()
+	}
 }
