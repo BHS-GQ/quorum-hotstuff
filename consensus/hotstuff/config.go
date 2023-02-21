@@ -18,8 +18,8 @@ type Config struct {
 
 // [TODO] Modify RequestTimeout; recommit time should be > blockPeriod
 var DefaultBasicConfig = &Config{
-	RequestTimeout: 4000,
-	BlockPeriod:    1,
+	RequestTimeout: 6000,
+	BlockPeriod:    3,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,

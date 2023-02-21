@@ -239,7 +239,6 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if header.Number == nil {
 		return errUnknownBlock
 	}
-
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != types.HotstuffDigest {
 		return errInvalidMixDigest
@@ -253,10 +252,6 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidDifficulty
 	}
 
-	// verifyCascadingFields verifies all the header fields that are not standalone,
-	// rather depend on a batch of previous headers. The caller may optionally pass
-	// in a batch of parents (ascending order) to avoid looking those up from the
-	// database. This is useful for concurrently verifying a batch of new headers.
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -273,8 +268,11 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if header.Time > parent.Time+s.config.BlockPeriod && header.Time > uint64(now().Unix()) {
+	if header.Time < parent.Time {
 		return errInvalidTimestamp
+	}
+	if header.Time > uint64(now().Unix()) {
+		return consensus.ErrFutureBlock
 	}
 
 	// [TODO] Verify validators in extraData. Validators in snapshot and extraData should be the same.
