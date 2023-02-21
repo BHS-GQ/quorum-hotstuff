@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
 type defaultValidator struct {
@@ -41,34 +41,34 @@ func (val *defaultValidator) String() string {
 // ----------------------------------------------------------------------------
 
 type defaultSet struct {
-	validators hotstuff.Validators
-	policy     hotstuff.SelectProposerPolicy
+	validators hs.Validators
+	policy     hs.SelectProposerPolicy
 
-	proposer    hotstuff.Validator
+	proposer    hs.Validator
 	validatorMu sync.RWMutex
-	selector    hotstuff.ProposalSelector
+	selector    hs.ProposalSelector
 }
 
-func newDefaultSet(addrs []common.Address, policy hotstuff.SelectProposerPolicy) *defaultSet {
+func newDefaultSet(addrs []common.Address, policy hs.SelectProposerPolicy) *defaultSet {
 	valSet := &defaultSet{}
 
 	valSet.policy = policy
-	// init validators
-	valSet.validators = make([]hotstuff.Validator, len(addrs))
+	// init hs.validators
+	valSet.validators = make([]hs.Validator, len(addrs))
 	for i, addr := range addrs {
 		valSet.validators[i] = New(addr)
 	}
-	// sort validator
+	// sort hs.validator
 	sort.Sort(valSet.validators)
 	// init proposer
 	if valSet.Size() > 0 {
 		valSet.proposer = valSet.GetByIndex(0)
 	}
 	valSet.selector = roundRobinSelector
-	if policy == hotstuff.Sticky {
+	if policy == hs.Sticky {
 		valSet.selector = stickySelector
 	}
-	if policy == hotstuff.VRF {
+	if policy == hs.VRF {
 		valSet.selector = vrfSelector
 	}
 
@@ -81,7 +81,7 @@ func (valSet *defaultSet) Size() int {
 	return len(valSet.validators)
 }
 
-func (valSet *defaultSet) List() []hotstuff.Validator {
+func (valSet *defaultSet) List() []hs.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	return valSet.validators
@@ -98,7 +98,7 @@ func (valSet *defaultSet) AddressList() []common.Address {
 	return vals
 }
 
-func (valSet *defaultSet) GetByIndex(i uint64) hotstuff.Validator {
+func (valSet *defaultSet) GetByIndex(i uint64) hs.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 	if i < uint64(valSet.Size()) {
@@ -107,7 +107,7 @@ func (valSet *defaultSet) GetByIndex(i uint64) hotstuff.Validator {
 	return nil
 }
 
-func (valSet *defaultSet) GetByAddress(addr common.Address) (int, hotstuff.Validator) {
+func (valSet *defaultSet) GetByAddress(addr common.Address) (int, hs.Validator) {
 	for i, val := range valSet.List() {
 		if addr == val.Address() {
 			return i, val
@@ -116,7 +116,7 @@ func (valSet *defaultSet) GetByAddress(addr common.Address) (int, hotstuff.Valid
 	return -1, nil
 }
 
-func (valSet *defaultSet) GetProposer() hotstuff.Validator {
+func (valSet *defaultSet) GetProposer() hs.Validator {
 	return valSet.proposer
 }
 
@@ -139,7 +139,7 @@ func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
 	}
 }
 
-func calcSeed(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) uint64 {
+func calcSeed(valSet hs.ValidatorSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
 	if idx, val := valSet.GetByAddress(proposer); val != nil {
 		offset = idx
@@ -151,7 +151,7 @@ func emptyAddress(addr common.Address) bool {
 	return addr == common.Address{}
 }
 
-func roundRobinSelector(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) hotstuff.Validator {
+func roundRobinSelector(valSet hs.ValidatorSet, proposer common.Address, round uint64) hs.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
@@ -165,7 +165,7 @@ func roundRobinSelector(valSet hotstuff.ValidatorSet, proposer common.Address, r
 	return valSet.GetByIndex(pick)
 }
 
-func stickySelector(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) hotstuff.Validator {
+func stickySelector(valSet hs.ValidatorSet, proposer common.Address, round uint64) hs.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
@@ -180,7 +180,7 @@ func stickySelector(valSet hotstuff.ValidatorSet, proposer common.Address, round
 }
 
 // TODO: implement VRF
-func vrfSelector(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) hotstuff.Validator {
+func vrfSelector(valSet hs.ValidatorSet, proposer common.Address, round uint64) hs.Validator {
 	return nil
 }
 
@@ -194,7 +194,7 @@ func (valSet *defaultSet) AddValidator(address common.Address) bool {
 	}
 	valSet.validators = append(valSet.validators, New(address))
 	// TODO: we may not need to re-sort it again
-	// sort validator
+	// sort hs.validator
 	sort.Sort(valSet.validators)
 	return true
 }
@@ -212,7 +212,7 @@ func (valSet *defaultSet) RemoveValidator(address common.Address) bool {
 	return false
 }
 
-func (valSet *defaultSet) Copy() hotstuff.ValidatorSet {
+func (valSet *defaultSet) Copy() hs.ValidatorSet {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
 
@@ -227,4 +227,4 @@ func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/
 
 func (valSet *defaultSet) Q() int { return valSet.F()*2 + 1 }
 
-func (valSet *defaultSet) Policy() hotstuff.SelectProposerPolicy { return valSet.policy }
+func (valSet *defaultSet) Policy() hs.SelectProposerPolicy { return valSet.policy }

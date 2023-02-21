@@ -1,4 +1,4 @@
-package core
+package hotstuff
 
 import "errors"
 
@@ -76,18 +76,4 @@ var (
 	errInvalidProposalMyself = errors.New("invalid propsal, comes from myself")
 
 	errTestIncorrectConversion = errors.New("incorrect conversion")
-
-	errInvalidNode = errors.New("invalid node")
-
-	errNilHighQC = errors.New("highQC is nil")
-
-	errInvalidRawHash = errors.New("raw hash is invalid")
-
-	errInvalidQC = errors.New("invalid qc")
-
-	errFailedDecodeMessage = errors.New("message payload invalid")
-
-	errInvalidCode = errors.New("message type invalid")
-
-	errInvalidBlock = errors.New("invalid block")
 )

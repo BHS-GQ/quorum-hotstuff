@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -23,7 +24,7 @@ var (
 type HotstuffExtra struct {
 	Validators []common.Address
 
-	BLSSignature []byte
+	EncodedQC []byte
 
 	Seal []byte
 	Salt []byte
@@ -33,7 +34,7 @@ type HotstuffExtra struct {
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Validators,
-		ist.BLSSignature,
+		ist.EncodedQC,
 		ist.Seal,
 		ist.Salt,
 	})
@@ -42,15 +43,29 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
-		Validators   []common.Address
-		BLSSignature []byte
-		Seal         []byte
-		Salt         []byte
+		Validators []common.Address
+		EncodedQC  []byte
+		Seal       []byte
+		Salt       []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.BLSSignature, ist.Salt = extra.Validators, extra.Seal, extra.BLSSignature, extra.Salt
+	ist.Validators, ist.Seal, ist.EncodedQC, ist.Salt = extra.Validators, extra.Seal, extra.EncodedQC, extra.Salt
+	return nil
+}
+
+func (h *Header) SetEncodedQC(encodedQC []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.EncodedQC = encodedQC
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
 	return nil
 }
 
@@ -74,7 +89,21 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 	return hotstuffExtra, nil
 }
 
-// HotstuffFilteredHeader returns a filtered header which some information (like seal, committed seals)
+func (h *Header) SetSeal(seal []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
+	return nil
+}
+
+// HotstuffFilteredHeader returns a filtered header which some information (like seal, bls seal)
 // are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.
 func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
@@ -87,6 +116,7 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	if !keepSeal {
 		extra.Seal = []byte{}
 	}
+	extra.EncodedQC = []byte{}
 	extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)
@@ -97,4 +127,58 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader.Extra = append(newHeader.Extra[:HotstuffExtraVanity], payload...)
 
 	return newHeader
+}
+
+func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) error {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:HotstuffExtraVanity])
+
+	if vals == nil {
+		vals = []common.Address{}
+	}
+	ist := &HotstuffExtra{
+		Validators: vals,
+		EncodedQC:  []byte{},
+		Seal:       []byte{},
+		Salt:       []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return err
+	}
+	header.Extra = append(buf.Bytes(), payload...)
+	return nil
+}
+
+func GenerateExtraWithSignature(epochStartHeight, epochEndHeight uint64, vals []common.Address, seal []byte, encodedQC []byte) ([]byte, error) {
+	var (
+		buf   bytes.Buffer
+		extra []byte
+	)
+
+	extra = append(extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(extra))...)
+	buf.Write(extra[:HotstuffExtraVanity])
+
+	if vals == nil {
+		vals = []common.Address{}
+	}
+	ist := &HotstuffExtra{
+		Validators: vals,
+		Seal:       seal,
+		EncodedQC:  encodedQC,
+		Salt:       []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
+	}
+	extra = append(buf.Bytes(), payload...)
+	return extra, nil
 }

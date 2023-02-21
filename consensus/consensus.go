@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -55,6 +56,9 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
+
+	// ExecuteBlock pre-execute block transactions and validate states
+	ExecuteBlock(block *types.Block) (*state.StateDB, types.Receipts, []*types.Log, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -133,6 +137,11 @@ type Handler interface {
 
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
+
+	GetBroadcaster() Broadcaster
+
+	// SubscribeBlock subscribe for listening executedBlock in miner.worker
+	SubscribeBlock(ch chan<- ExecutedBlock) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -163,6 +172,21 @@ type HotStuff interface {
 
 	// Stop stops the engine
 	Stop() error
+}
+
+// MockHotStuff is used by the mock testing suite
+type MockHotStuff interface {
+	HotStuff
+
+	// MockSeal is the Seal() function called in the mock system
+	MockSeal(chain ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error
+}
+
+type ExecutedBlock struct {
+	State    *state.StateDB
+	Block    *types.Block
+	Receipts types.Receipts
+	Logs     []*types.Log
 }
 
 // /Hotstuff

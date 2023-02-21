@@ -2766,3 +2766,22 @@ func (bc *BlockChain) CheckAndSetPrivateState(txLogs []*types.Log, privateState 
 		bc.setPrivateState(txLogs, privateState, psi)
 	}
 }
+
+// ExecuteBlock executing and validate block for hotstuff consensus `prepare` step.
+func (bc *BlockChain) ExecuteBlock(block *types.Block) (*state.StateDB, types.Receipts, []*types.Log, error) {
+	parent := bc.GetBlockByHash(block.ParentHash())
+	statedb, privstatedb, err := bc.StateAt(parent.Root())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	receipts, _, allLogs, usedGas, err := bc.processor.Process(block, statedb, privstatedb, bc.vmConfig)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
+		return nil, nil, nil, err
+	}
+
+	return statedb, receipts, allLogs, nil
+}
