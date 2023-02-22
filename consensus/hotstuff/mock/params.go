@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -50,7 +50,7 @@ func makeGenesis(vals []common.Address) *core.Genesis {
 		Timestamp:  0,
 	}
 
-	valset := validator.NewSet(vals, hotstuff.RoundRobin)
+	valset := validator.NewSet(vals, hs.RoundRobin)
 	genesis.ExtraData, _ = types.GenerateExtraWithSignature(EpochStart, EpochEnd, valset.AddressList(), []byte{}, []byte{})
 	return genesis
 }

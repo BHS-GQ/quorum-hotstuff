@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -147,7 +146,7 @@ func (s *Backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 			s.sealMu.Unlock()
 		}()
 		// post block into HotStuff engine
-		go s.EventMux().Post(hotstuff.RequestEvent{
+		go s.EventMux().Post(hs.RequestEvent{
 			Block: block,
 		})
 		for {

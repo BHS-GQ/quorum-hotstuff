@@ -2,7 +2,6 @@ package backend
 
 import (
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -29,7 +28,7 @@ func (s *Backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block
 	}
 	block = block.WithSeal(header)
 
-	go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
+	go s.EventMux().Post(hs.RequestEvent{Block: block})
 
 	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
 

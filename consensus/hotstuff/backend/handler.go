@@ -24,7 +24,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -43,7 +42,7 @@ func (s *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 		return nil, common.Hash{}, hs.ErrDecodeFailed
 	}
 
-	return data, hotstuff.RLPHash(data), nil
+	return data, hs.RLPHash(data), nil
 }
 
 // HotStuff
@@ -85,7 +84,7 @@ func (s *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}
 		s.knownMessages.Add(hash, true)
 
-		go s.eventMux.Post(hotstuff.MessageEvent{
+		go s.eventMux.Post(hs.MessageEvent{
 			Src:     addr,
 			Payload: data,
 		})
@@ -135,7 +134,7 @@ func (s *Backend) NewChainHead(header *types.Header) error {
 	if !s.coreStarted {
 		return ErrStoppedEngine
 	}
-	go s.eventMux.Post(hotstuff.FinalCommittedEvent{Header: header})
+	go s.eventMux.Post(hs.FinalCommittedEvent{Header: header})
 	return nil
 }
 
