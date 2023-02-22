@@ -51,7 +51,7 @@ func (c *Core) processBacklog() {
 				continue
 			}
 			if err := c.checkView(msg.View); err != nil {
-				if err == errFutureMessage {
+				if err == hs.ErrFutureMessage {
 					queue.Push(data, priority)
 					isFuture = true
 					break

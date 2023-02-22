@@ -220,7 +220,7 @@ func (s *Backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types
 	h := block.Header()
 	if h == nil {
 		s.logger.Error("Invalid proposal precommit")
-		return nil, errInvalidProposal
+		return nil, hs.ErrInvalidProposal
 	}
 
 	encodedQC, err := hs.Encode(commitQC)
@@ -272,10 +272,10 @@ func (s *Backend) Verify(block *types.Block) (time.Duration, error) {
 	txnHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
 	uncleHash := types.CalcUncleHash(block.Uncles())
 	if txnHash != block.Header().TxHash {
-		return 0, errMismatchTxhashes
+		return 0, hs.ErrMismatchTxhashes
 	}
 	if uncleHash != nilUncleHash {
-		return 0, errInvalidUncleHash
+		return 0, hs.ErrInvalidUncleHash
 	}
 
 	// verify the header of proposed block

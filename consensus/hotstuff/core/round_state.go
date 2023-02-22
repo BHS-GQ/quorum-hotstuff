@@ -136,7 +136,7 @@ func (s *roundState) PendingRequest() *hs.Request {
 
 func (s *roundState) SetTreeNode(node *hs.TreeNode) error {
 	if node == nil || node.Block == nil {
-		return errInvalidNode
+		return hs.ErrInvalidNode
 	}
 
 	s.node = node
@@ -149,7 +149,7 @@ func (s *roundState) TreeNode() *hs.TreeNode {
 
 func (s *roundState) Lock(qc *hs.QuorumCert) error {
 	if s.node == nil || s.node == nil {
-		return errInvalidNode
+		return hs.ErrInvalidNode
 	}
 
 	if err := s.storeLockQC(qc); err != nil {

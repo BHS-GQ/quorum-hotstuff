@@ -3,77 +3,106 @@ package hotstuff
 import "errors"
 
 var (
-	errUnauthorizedAddress = errors.New("unauthorized address")
+	ErrInvalidMessage = errors.New("invalid Message")
 
-	errInconsistentVote = errors.New("inconsistent vote")
+	ErrInvalidSigner = errors.New("Message not signed by the sender")
 
-	errInvalidDigest = errors.New("invalid digest")
+	ErrUnauthorizedAddress = errors.New("unauthorized address")
 
-	errNotFromProposer = errors.New("Message does not come from proposer")
+	ErrInconsistentVote = errors.New("inconsistent vote")
 
-	errNotToProposer = errors.New("Message does not send to proposer")
+	ErrInvalidDigest = errors.New("invalid digest")
 
-	errFutureMessage = errors.New("future Message")
+	ErrNotFromProposer = errors.New("Message does not come from proposer")
 
-	errFarAwayFutureMessage = errors.New("far away future Message")
+	ErrNotToProposer = errors.New("Message does not send to proposer")
 
-	errOldMessage = errors.New("old Message")
+	ErrFutureMessage = errors.New("future Message")
 
-	errInvalidMessage = errors.New("invalid Message")
+	ErrFarAwayFutureMessage = errors.New("far away future Message")
 
-	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
+	ErrOldMessage = errors.New("old Message")
 
-	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
+	ErrFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 
-	errFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
+	ErrFailedDecodePrepare = errors.New("failed to decode PREPARE")
 
-	errFailedDecodePreCommit = errors.New("failed to decode PRECOMMIT")
+	ErrFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
 
-	errFailedDecodePreCommitVote = errors.New("faild to decode PRECOMMIT_VOTE")
+	ErrFailedDecodePreCommit = errors.New("failed to decode PRECOMMIT")
 
-	errFailedDecodeCommit = errors.New("failed to decode COMMIT")
+	ErrFailedDecodePreCommitVote = errors.New("faild to decode PRECOMMIT_VOTE")
 
-	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
+	ErrFailedDecodeCommit = errors.New("failed to decode COMMIT")
 
-	errInvalidSigner = errors.New("Message not signed by the sender")
+	ErrFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
 
-	errState = errors.New("error state")
+	ErrState = errors.New("error state")
 
-	errNoRequest = errors.New("no valid request")
+	ErrNoRequest = errors.New("no valid request")
 
-	errInvalidProposal = errors.New("invalid proposal")
+	ErrVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 
-	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
+	ErrExtend = errors.New("proposal extend relationship error")
 
-	errExtend = errors.New("proposal extend relationship error")
+	ErrSafeNode = errors.New("safeNode checking failed")
 
-	errSafeNode = errors.New("safeNode checking failed")
+	ErrAddNewViews = errors.New("add new view error")
 
-	errAddNewViews = errors.New("add new view error")
+	ErrAddPrepareVote = errors.New("add prepare vote error")
 
-	errAddPrepareVote = errors.New("add prepare vote error")
+	ErrAddPreCommitVote = errors.New("add pre commit vote error")
 
-	errAddPreCommitVote = errors.New("add pre commit vote error")
+	ErrInvalidSignature = errors.New("invalid signature")
 
-	errInvalidSignature = errors.New("invalid signature")
+	ErrIncorrectAggInfo = errors.New("incorrect agg information")
 
-	errUnauthorized = errors.New("unauthorized")
+	ErrInsufficientAggPub = errors.New("insufficient aggPub")
 
-	errInvalidExtraDataFormat = errors.New("invalid extra data format")
+	ErrInvalidAggregatedSig = errors.New("invalid aggregated signature")
 
-	errInvalidCommittedSeals = errors.New("invalid committed seals")
+	ErrEmptyAggregatedSig = errors.New("zero aggregated signature")
 
-	errEmptyCommittedSeals = errors.New("zero committed seals")
+	ErrInvalidProposalMyself = errors.New("invalid propsal, comes from myself")
 
-	errIncorrectAggInfo = errors.New("incorrect agg information")
+	ErrTestIncorrectConversion = errors.New("incorrect conversion")
 
-	errInsufficientAggPub = errors.New("insufficient aggPub")
+	ErrInvalidNode = errors.New("invalid node")
 
-	errInvalidAggregatedSig = errors.New("invalid aggregated signature")
+	ErrNilHighQC = errors.New("highQC is nil")
 
-	errEmptyAggregatedSig = errors.New("zero aggregated signature")
+	ErrInvalidRawHash = errors.New("raw hash is invalid")
 
-	errInvalidProposalMyself = errors.New("invalid propsal, comes from myself")
+	ErrInvalidQC = errors.New("invalid qc")
 
-	errTestIncorrectConversion = errors.New("incorrect conversion")
+	ErrFailedDecodeMessage = errors.New("message payload invalid")
+
+	ErrInvalidCode = errors.New("message type invalid")
+
+	ErrInvalidBlock = errors.New("invalid block")
+
+	// ErrInvalidProposal is returned when a prposal is malformed.
+	ErrInvalidProposal = errors.New("invalid proposal")
+	// ErrUnknownBlock is returned when the list of validators is requested for a block that is not part of the local blockchain.
+	ErrUnknownBlock = errors.New("unknown block")
+	// ErrUnauthorized is returned if a header is signed by a non authorized entity.
+	ErrUnauthorized = errors.New("unauthorized")
+	// ErrInvalidDifficulty is returned if the difficulty of a block is not 1
+	ErrInvalidDifficulty = errors.New("invalid difficulty")
+	// ErrInvalidExtraDataFormat is returned when the extra data format is incorrect
+	ErrInvalidExtraDataFormat = errors.New("invalid extra data format")
+	// ErrInvalidMixDigest is returned if a block's mix digest is not Istanbul digest.
+	ErrInvalidMixDigest = errors.New("invalid Istanbul mix digest")
+	// ErrInvalidUncleHash is returned if a block contains an non-empty uncle list.
+	ErrInvalidUncleHash = errors.New("non empty uncle hash")
+	// ErrInvalidTimestamp is returned if the timestamp of a block is lower than the previous block's timestamp + the minimum block period.
+	ErrInvalidTimestamp = errors.New("invalid timestamp")
+	// ErrInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
+	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
+	// ErrEmptyCommittedSeals is returned if the field of committed seals is zero.
+	ErrEmptyCommittedSeals = errors.New("zero committed seals")
+	// ErrMismatchTxhashes is returned if the TxHash in header is mismatch.
+	ErrMismatchTxhashes = errors.New("mismatch transactions hashes")
+	// ErrDecodeFailed is returned if the message can't be decode
+	ErrDecodeFailed = errors.New("decode p2p message failed")
 )

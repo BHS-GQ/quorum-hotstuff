@@ -45,13 +45,13 @@ func (c *Core) handleCommitVote(data *hs.Message) error {
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {
 		logger.Trace("Failed to get lockBlock", "msg", code, "src", src, "err", "block is nil")
-		return errInvalidNode
+		return hs.ErrInvalidNode
 	}
 
 	// queue vote into messageSet to ensure that at least 2/3 validator vote at the same step.
 	if err := c.current.AddCommitVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-		return errAddPreCommitVote
+		return hs.ErrAddPreCommitVote
 	}
 
 	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote)
@@ -110,7 +110,7 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	// check message
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodeCommit
+		return hs.ErrFailedDecodeCommit
 	}
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
@@ -134,27 +134,27 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {
 		logger.Trace("Locked block is nil", "msg", code, "src", src)
-		return errInvalidBlock
+		return hs.ErrInvalidBlock
 	} else if blockHash == hs.EmptyHash || lockedBlock.Hash() != blockHash {
 		logger.Trace("Failed to check block hash", "msg", code, "src", src, "expect block", lockedBlock.Hash(), "got", blockHash)
-		return errInvalidBlock
+		return hs.ErrInvalidBlock
 	}
 
 	if curNode := c.current.TreeNode(); curNode == nil || curNode.Block == nil {
 		logger.Trace("Current node is nil")
-		return errInvalidNode
+		return hs.ErrInvalidNode
 	} else if curNode.Hash() != commitQC.TreeNode {
 		logger.Trace("Failed to check commitQC", "expect node", curNode.Hash(), "got", commitQC.TreeNode)
-		return errInvalidQC
+		return hs.ErrInvalidQC
 	} else if curNode.Block.Hash() != blockHash {
 		logger.Trace("Failed to check node", "expect node block hash", curNode.Block.Hash(), "got", blockHash)
-		return errInvalidBlock
+		return hs.ErrInvalidBlock
 	}
 
 	// // [TODO] Seal block with BLS Aggregated Sig of PrepareQC
 	// if err := c.signer.VerifyBlockBLSSig(); err != nil {
 	// 	logger.Trace("Failed to verify aggsig'd block", "msg", code, "src", src, "err", err)
-	// 	return errInvalidQC
+	// 	return hs.ErrInvalidQC
 	// }
 	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.TreeNode)
 

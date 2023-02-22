@@ -90,7 +90,7 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	// check message
 	if err := data.Decode(&subject); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodePrepare
+		return hs.ErrFailedDecodePrepare
 	}
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
@@ -116,7 +116,7 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	}
 	if duration, err := c.backend.Verify(block); err != nil {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
-		return errVerifyUnsealedProposal
+		return hs.ErrVerifyUnsealedProposal
 	}
 	if err := c.executeBlock(block); err != nil {
 		logger.Trace("Failed to execute block", "msg", code, "src", src, "err", err)
@@ -131,7 +131,7 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	}
 	if err := c.safeNode(node, highQC); err != nil {
 		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
-		return errSafeNode
+		return hs.ErrSafeNode
 	}
 
 	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.Hash())
@@ -174,7 +174,7 @@ func (c *Core) executeBlock(block *types.Block) error {
 func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 	// Data checks
 	if highQC == nil || highQC.View == nil {
-		return errInvalidQC
+		return hs.ErrInvalidQC
 	}
 	if highQC.TreeNode != node.Parent {
 		return fmt.Errorf("expect parent %v, got %v", highQC.TreeNode, node.Parent)
@@ -196,5 +196,5 @@ func (c *Core) safeNode(node *hs.TreeNode, highQC *hs.QuorumCert) error {
 		return nil
 	}
 
-	return errSafeNode
+	return hs.ErrSafeNode
 }

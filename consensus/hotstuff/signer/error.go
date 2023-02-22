@@ -19,8 +19,6 @@ var (
 
 	errOldMessage = errors.New("old Message")
 
-	errInvalidMessage = errors.New("invalid Message")
-
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 
 	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
@@ -34,8 +32,6 @@ var (
 	errFailedDecodeCommit = errors.New("failed to decode COMMIT")
 
 	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
-
-	errInvalidSigner = errors.New("Message not signed by the sender")
 
 	errState = errors.New("error state")
 

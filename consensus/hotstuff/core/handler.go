@@ -129,14 +129,14 @@ func (c *Core) handleMsg(val common.Address, payload []byte) error {
 	msg := new(hs.Message)
 	if err := msg.FromPayload(val, payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode Message from payload", "err", err)
-		return errFailedDecodeMessage
+		return hs.ErrFailedDecodeMessage
 	}
 
 	// Only accept message if the src is consensus participant
 	index, src := c.valSet.GetByAddress(val)
 	if index < 0 || src == nil {
 		logger.Error("Invalid address in Message", "msg", msg)
-		return errInvalidSigner
+		return hs.ErrInvalidSigner
 	}
 
 	// handle checked Message
@@ -167,11 +167,11 @@ func (c *Core) handleCheckedMsg(msg *hs.Message) (err error) {
 	case hs.MsgTypeDecide:
 		err = c.handleDecide(msg)
 	default:
-		err = errInvalidMessage
+		err = hs.ErrInvalidMessage
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
 
-	if err == errFutureMessage {
+	if err == hs.ErrFutureMessage {
 		c.storeBacklog(msg)
 	}
 	return

@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
@@ -39,7 +40,7 @@ const (
 func (s *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	var data []byte
 	if err := msg.Decode(&data); err != nil {
-		return nil, common.Hash{}, errDecodeFailed
+		return nil, common.Hash{}, hs.ErrDecodeFailed
 	}
 
 	return data, hotstuff.RLPHash(data), nil
@@ -65,7 +66,7 @@ func (s *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 
 		data, hash, err := s.decode(msg)
 		if err != nil {
-			return true, errDecodeFailed
+			return true, hs.ErrDecodeFailed
 		}
 		// Mark peer's message
 		ms, ok := s.recentMessages.Get(addr)

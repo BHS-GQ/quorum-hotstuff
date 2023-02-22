@@ -368,7 +368,7 @@ func (m *Message) FromPayload(src common.Address, payload []byte, validateFn fun
 
 	// Check for nil fields
 	if m.View == nil || m.Msg == nil {
-		return errInvalidMessage
+		return ErrInvalidMessage
 	}
 
 	// Validate unsigned Message
@@ -381,7 +381,7 @@ func (m *Message) FromPayload(src common.Address, payload []byte, validateFn fun
 			return err
 		}
 		if !bytes.Equal(signer.Bytes(), src.Bytes()) {
-			return errInvalidSigner
+			return ErrInvalidSigner
 		}
 	}
 

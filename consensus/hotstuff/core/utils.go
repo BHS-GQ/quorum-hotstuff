@@ -45,21 +45,21 @@ func (c *Core) RoundU64() uint64 {
 // state is `future Message`. Message type and round state table as follow:
 func (c *Core) checkView(view *hs.View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
-		return errInvalidMessage
+		return hs.ErrInvalidMessage
 	}
 
 	if hdiff, rdiff := view.Sub(c.currentView()); hdiff < 0 {
-		return errOldMessage
+		return hs.ErrOldMessage
 	} else if hdiff > 1 {
-		return errFarAwayFutureMessage
+		return hs.ErrFarAwayFutureMessage
 	} else if hdiff == 1 {
-		return errFutureMessage
+		return hs.ErrFutureMessage
 	} else if rdiff < 0 {
-		return errOldMessage
+		return hs.ErrOldMessage
 	} else if rdiff == 0 {
 		return nil
 	} else {
-		return errFutureMessage
+		return hs.ErrFutureMessage
 	}
 }
 
@@ -70,7 +70,7 @@ func (c *Core) newLogger() log.Logger {
 
 func (c *Core) checkMsgDest() error {
 	if !c.IsProposer() {
-		return errNotToProposer
+		return hs.ErrNotToProposer
 	}
 	return nil
 }
@@ -167,7 +167,7 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 	// 	return nil, err
 	// }
 	// if extra.Seal == nil {
-	// 	return nil, errInvalidNode
+	// 	return nil, hs.ErrInvalidNode
 	// }
 
 	// [TODO] extra.BLSSignature with predetermined msg for genesis
@@ -210,7 +210,7 @@ func (c *Core) sendVote(code hs.MsgType) {
 
 func (c *Core) checkMsgSource(src common.Address) error {
 	if !c.valSet.IsProposer(src) {
-		return errNotFromProposer
+		return hs.ErrNotFromProposer
 	}
 	return nil
 }
@@ -219,7 +219,7 @@ func (c *Core) checkMsgSource(src common.Address) error {
 func (c *Core) checkNode(node *hs.TreeNode, compare bool) error {
 	if node == nil || node.Parent == hs.EmptyHash ||
 		node.Block == nil || node.Block.Header() == nil {
-		return errInvalidNode
+		return hs.ErrInvalidNode
 	}
 
 	if !compare {
@@ -308,7 +308,7 @@ func (c *Core) GetMessages(code hs.MsgType) ([]*hs.Message, error) {
 	case hs.MsgTypeCommitVote:
 		msgs = c.current.CommitVotes()
 	default:
-		return nil, errInvalidCode
+		return nil, hs.ErrInvalidCode
 	}
 
 	return msgs, err

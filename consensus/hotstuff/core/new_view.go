@@ -33,7 +33,7 @@ func (c *Core) handleNewView(data *hs.Message) error {
 	// check message
 	if err := data.Decode(&prepareQC); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodeNewView
+		return hs.ErrFailedDecodeNewView
 	}
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
@@ -52,7 +52,7 @@ func (c *Core) handleNewView(data *hs.Message) error {
 	// messages queued in messageSet to ensure there will be at least 2/3 validators on the same step
 	if err := c.current.AddNewViews(data); err != nil {
 		logger.Trace("Failed to add new view", "msg", code, "src", src, "err", err)
-		return errAddNewViews
+		return hs.ErrAddNewViews
 	}
 
 	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.TreeNode)
@@ -86,7 +86,7 @@ func (c *Core) getHighQC() (*hs.QuorumCert, error) {
 		}
 	}
 	if highQC == nil {
-		return nil, errNilHighQC
+		return nil, hs.ErrNilHighQC
 	}
 	return highQC, nil
 }

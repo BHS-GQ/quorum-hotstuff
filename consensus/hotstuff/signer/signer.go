@@ -122,18 +122,18 @@ func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorS
 		return err
 	}
 	if signer != header.Coinbase {
-		return errInvalidSigner
+		return hs.ErrInvalidSigner
 	}
 
 	// Signer should be in the validator set of previous block's extraData.
 	if _, v := valSet.GetByAddress(signer); v == nil {
-		return errUnauthorized
+		return hs.ErrUnauthorized
 	}
 
 	if seal {
 		extra, err := types.ExtractHotstuffExtra(header)
 		if err != nil {
-			return errInvalidExtraDataFormat
+			return hs.ErrInvalidExtraDataFormat
 		}
 		encodedQC := extra.EncodedQC
 
@@ -157,10 +157,10 @@ func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorS
 
 func (s *HotstuffSigner) Sign(hash common.Hash) ([]byte, error) {
 	if hash == hs.EmptyHash {
-		return nil, errInvalidRawHash
+		return nil, hs.ErrInvalidRawHash
 	}
 	if s.privateKey == nil {
-		return nil, errInvalidSigner
+		return nil, hs.ErrInvalidSigner
 	}
 
 	return crypto.Sign(hash.Bytes(), s.privateKey)
@@ -190,7 +190,7 @@ func (s *HotstuffSigner) RecoverSigner(header *types.Header) (common.Address, er
 	// Retrieve the signature from the header extra-data
 	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
-		return common.Address{}, errInvalidExtraDataFormat
+		return common.Address{}, hs.ErrInvalidExtraDataFormat
 	}
 
 	headerHash := s.HeaderHash(header)
@@ -210,11 +210,11 @@ func (s *HotstuffSigner) SignerSeal(h *types.Header) error {
 	HeaderHash := s.HeaderHash(h)
 	seal, err := s.Sign(HeaderHash)
 	if err != nil {
-		return errInvalidSignature
+		return hs.ErrInvalidSignature
 	}
 
 	if len(seal)%types.HotstuffExtraSeal != 0 {
-		return errInvalidSignature
+		return hs.ErrInvalidSignature
 	}
 
 	if err := h.SetSeal(seal); err != nil {
@@ -230,10 +230,10 @@ func (s *HotstuffSigner) CheckSignature(valSet hs.ValidatorSet, hash common.Hash
 		return hs.EmptyAddress, fmt.Errorf("invalid ValidatorSet")
 	}
 	if hash == hs.EmptyHash {
-		return hs.EmptyAddress, errInvalidRawHash
+		return hs.EmptyAddress, hs.ErrInvalidRawHash
 	}
 	if sig == nil {
-		return hs.EmptyAddress, errInvalidSignature
+		return hs.EmptyAddress, hs.ErrInvalidSignature
 	}
 
 	// 1. Get signature address
@@ -247,7 +247,7 @@ func (s *HotstuffSigner) CheckSignature(valSet hs.ValidatorSet, hash common.Hash
 		return val.Address(), nil
 	}
 
-	return common.Address{}, errUnauthorizedAddress
+	return common.Address{}, hs.ErrUnauthorizedAddress
 }
 
 func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hs.ValidatorSet) ([]byte, error) {
@@ -278,10 +278,10 @@ func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hs.Valid
 
 func getSignatureAddress(hash common.Hash, sig []byte) (common.Address, error) {
 	if hash == hs.EmptyHash {
-		return hs.EmptyAddress, errInvalidRawHash
+		return hs.EmptyAddress, hs.ErrInvalidRawHash
 	}
 	if sig == nil {
-		return hs.EmptyAddress, errInvalidSignature
+		return hs.EmptyAddress, hs.ErrInvalidSignature
 	}
 
 	// 2. Recover public key

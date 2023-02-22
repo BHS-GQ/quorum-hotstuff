@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -59,7 +60,7 @@ func (s *Backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*ty
 
 func (s *Backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
-		return errInvalidUncleHash
+		return hs.ErrInvalidUncleHash
 	}
 	return nil
 }
@@ -120,7 +121,7 @@ func (s *Backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	// Bail out if we're unauthorized to sign a block
 	snap := s.snap()
 	if _, v := snap.GetByAddress(s.Address()); v == nil {
-		return errUnauthorized
+		return hs.ErrUnauthorized
 	}
 
 	parent := chain.GetHeader(header.ParentHash, number-1)
@@ -237,19 +238,19 @@ func (s *Backend) Close() error {
 // a batch of new headers.
 func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
 	if header.Number == nil {
-		return errUnknownBlock
+		return hs.ErrUnknownBlock
 	}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != types.HotstuffDigest {
-		return errInvalidMixDigest
+		return hs.ErrInvalidMixDigest
 	}
 	// Ensure that the block doesn't contain any uncles which are meaningless in HotStuff
 	if header.UncleHash != nilUncleHash {
-		return errInvalidUncleHash
+		return hs.ErrInvalidUncleHash
 	}
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
 	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
+		return hs.ErrInvalidDifficulty
 	}
 
 	// The genesis block is the always valid dead-end
@@ -269,7 +270,7 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return consensus.ErrUnknownAncestor
 	}
 	if header.Time < parent.Time {
-		return errInvalidTimestamp
+		return hs.ErrInvalidTimestamp
 	}
 	if header.Time > uint64(now().Unix()) {
 		return consensus.ErrFutureBlock

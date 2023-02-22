@@ -39,7 +39,7 @@ func (c *Core) handlePreCommitVote(data *hs.Message) error {
 
 	if err := c.current.AddPreCommitVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-		return errAddPreCommitVote
+		return hs.ErrAddPreCommitVote
 	}
 
 	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)
@@ -91,7 +91,7 @@ func (c *Core) handleCommit(data *hs.Message) error {
 	// check message
 	if err := data.Decode(&lockQC); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodeCommit
+		return hs.ErrFailedDecodeCommit
 	}
 	if err := c.checkView(lockQC.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)

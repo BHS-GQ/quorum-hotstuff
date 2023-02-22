@@ -23,7 +23,7 @@ func (c *Core) handlePrepareVote(data *hs.Message) error {
 	// check message
 	if err := data.Decode(&vote); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodePrepare
+		return hs.ErrFailedDecodePrepare
 	}
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
@@ -41,7 +41,7 @@ func (c *Core) handlePrepareVote(data *hs.Message) error {
 	// queued vote into messageSet to ensure that at least 2/3 validators vote on the same step.
 	if err := c.current.AddPrepareVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
-		return errAddPrepareVote
+		return hs.ErrAddPrepareVote
 	}
 
 	logger.Trace("handlePrepareVote", "msg", code, "src", src, "vote", vote)
@@ -50,7 +50,7 @@ func (c *Core) handlePrepareVote(data *hs.Message) error {
 		prepareQC, err := c.messagesToQC(code)
 		if err != nil {
 			logger.Trace("Failed to assemble prepareQC", "msg", code, "err", err)
-			return errInvalidQC
+			return hs.ErrInvalidQC
 		}
 		if err := c.acceptPrepareQC(prepareQC); err != nil {
 			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
@@ -95,7 +95,7 @@ func (c *Core) handlePreCommit(data *hs.Message) error {
 	// check message
 	if err := data.Decode(&prepareQC); err != nil {
 		logger.Trace("Failed to check decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodePreCommit
+		return hs.ErrFailedDecodePreCommit
 	}
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)

@@ -3,6 +3,7 @@ package backend
 import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -14,7 +15,7 @@ func (s *Backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block
 	// Bail out if we're unauthorized to sign a block
 	snap := s.snap()
 	if _, v := snap.GetByAddress(s.Address()); v == nil {
-		return errUnauthorized
+		return hs.ErrUnauthorized
 	}
 
 	parent := chain.GetHeader(header.ParentHash, number-1)

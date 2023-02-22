@@ -7,9 +7,9 @@ import (
 func (c *Core) handleRequest(request *hs.Request) error {
 	logger := c.newLogger()
 	if err := c.checkRequestMsg(request); err != nil {
-		if err == errInvalidMessage {
+		if err == hs.ErrInvalidMessage {
 			logger.Warn("invalid request")
-		} else if err == errFutureMessage {
+		} else if err == hs.ErrFutureMessage {
 			c.storeRequestMsg(request)
 		} else {
 			logger.Warn("unexpected request", "err", err, "number", request.Block.Number(), "hash", request.Block.Hash())
@@ -44,18 +44,18 @@ func (c *Core) handleRequest(request *hs.Request) error {
 }
 
 // check request state
-// return errInvalidMessage if the message is invalid
-// return errFutureMessage if the sequence of proposal is larger than current sequence
-// return errOldMessage if the sequence of proposal is smaller than current sequence
+// return hs.ErrInvalidMessage if the message is invalid
+// return hs.ErrFutureMessage if the sequence of proposal is larger than current sequence
+// return hs.ErrOldMessage if the sequence of proposal is smaller than current sequence
 func (c *Core) checkRequestMsg(request *hs.Request) error {
 	if request == nil || request.Block == nil {
-		return errInvalidMessage
+		return hs.ErrInvalidMessage
 	}
 
 	if c := c.current.Height().Cmp(request.Block.Number()); c > 0 {
-		return errOldMessage
+		return hs.ErrOldMessage
 	} else if c < 0 {
-		return errFutureMessage
+		return hs.ErrFutureMessage
 	} else {
 		return nil
 	}
@@ -85,7 +85,7 @@ func (c *Core) processPendingRequests() {
 		}
 		// Push back if it's a future message
 		if err := c.checkRequestMsg(r); err != nil {
-			if err == errFutureMessage {
+			if err == hs.ErrFutureMessage {
 				c.logger.Trace("Stop processing request", "number", r.Block.Number(), "hash", r.Block.Hash())
 				c.pendingRequests.Push(m, prio)
 				break
