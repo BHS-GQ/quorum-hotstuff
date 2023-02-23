@@ -1,4 +1,4 @@
-package core
+package faulty
 
 import (
 	"math/big"
@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/faulty"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -43,9 +42,6 @@ type Core struct {
 
 // New creates an HotStuff consensus core
 func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Database, valSet hs.ValidatorSet) hs.CoreEngine {
-	if config.FaultyMode != hs.Disabled.Uint64() {
-		return faulty.New(backend, config, signer, db, valSet)
-	}
 	c := &Core{
 		db:                db,
 		config:            config,
