@@ -13,8 +13,8 @@ type FaultyMode uint64
 const (
 	// Disabled disables the faulty mode
 	Disabled FaultyMode = iota
-	// Leader sends faulty Decide message
-	BadDecide
+	// Leader sends fault PreCommit message to <=F replicas
+	TargetedWrongPreCommit
 )
 
 func (f FaultyMode) Uint64() uint64 {
@@ -25,6 +25,8 @@ func (f FaultyMode) String() string {
 	switch f {
 	case Disabled:
 		return "Disabled"
+	case TargetedWrongPreCommit:
+		return "TargetedWrongPreCommit"
 	default:
 		return "Undefined"
 	}

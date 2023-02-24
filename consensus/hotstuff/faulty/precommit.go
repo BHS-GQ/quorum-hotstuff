@@ -74,7 +74,26 @@ func (c *Core) sendPreCommit(prepareQC *hs.QuorumCert) {
 		logger.Trace("Failed to encode", "msg", code, "err", err)
 		return
 	}
-	c.broadcast(code, payload)
+
+	if c.isFaultTriggered(hs.TargetedWrongPreCommit, uint64(4), uint64(0)) {
+		vsOkMsg, vsBadMsg := c.splitValSet(c.valSet, c.valSet.F())
+
+		badPrepareQC := prepareQC.Copy()
+		badPrepareQC.BLSSignature[0] += 1 // poison QC
+		badPayload, err := hs.Encode(badPrepareQC)
+		if err != nil {
+			logger.Trace("Failed to encode", "msg", code, "err", err)
+			return
+		}
+
+		c.broadcastToSpecific(vsOkMsg, true, code, payload)
+		c.broadcastToSpecific(vsBadMsg, false, code, badPayload)
+
+		logger.Trace("FAULT TRIGGERED -- TargetedWrongPreCommit", "targets", vsBadMsg.AddressList())
+	} else {
+		c.broadcast(code, payload)
+	}
+
 	logger.Trace("sendPreCommit", "msg", code, "node", prepareQC.TreeNode)
 }
 

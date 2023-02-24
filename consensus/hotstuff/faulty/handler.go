@@ -193,7 +193,7 @@ func (c *Core) unsubscribeEvents() {
 func (c *Core) broadcast(code hs.MsgType, payload []byte) {
 	logger := c.logger.New("state", c.currentState())
 
-	// Forbid non-validator nodest to send message to leader
+	// Forbid non-validator nodes to send message to leader
 	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
 		return
 	}
@@ -221,6 +221,28 @@ func (c *Core) broadcast(code hs.MsgType, payload []byte) {
 		}
 	default:
 		logger.Error("invalid msg type", "msg", msg)
+	}
+}
+
+// Faulty node can broadcast indiscriminately
+func (c *Core) broadcastToSpecific(targetValSet hs.ValidatorSet, toSelf bool, code hs.MsgType, payload []byte) {
+	logger := c.logger.New("state", c.currentState())
+
+	msg := hs.NewCleanMessage(c.currentView(), code, payload)
+	payload, err := c.finalizeMessage(msg)
+	if err != nil {
+		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
+		return
+	}
+
+	if toSelf {
+		if err = c.backend.Broadcast(targetValSet, payload); err != nil {
+			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
+		}
+	} else {
+		if err = c.backend.Gossip(targetValSet, payload); err != nil {
+			logger.Error("Failed to gossip Message", "msg", msg, "err", err)
+		}
 	}
 }
 
