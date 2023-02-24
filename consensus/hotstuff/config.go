@@ -13,8 +13,10 @@ type FaultyMode uint64
 const (
 	// Disabled disables the faulty mode
 	Disabled FaultyMode = iota
-	// Leader sends fault PreCommit message to <=F replicas
+	// Leader sends faulty PreCommit message to <=F replicas
 	TargetedWrongPreCommit
+	// Leader sends faulty PreCommit message to <=F replicas
+	TargetedWrongCommit
 )
 
 func (f FaultyMode) Uint64() uint64 {
@@ -27,6 +29,8 @@ func (f FaultyMode) String() string {
 		return "Disabled"
 	case TargetedWrongPreCommit:
 		return "TargetedWrongPreCommit"
+	case TargetedWrongCommit:
+		return "TargetedWrongCommit"
 	default:
 		return "Undefined"
 	}
@@ -48,5 +52,5 @@ var DefaultBasicConfig = &Config{
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,
-	FaultyMode:     Disabled.Uint64(),
+	FaultyMode:     TargetedWrongCommit.Uint64(),
 }

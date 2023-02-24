@@ -104,7 +104,7 @@ func (c *Core) handleCommit(data *hs.Message) error {
 
 	// ensure `lockQC` is legal
 	if err := c.verifyQC(data, lockQC); err != nil {
-		logger.Trace("Failed to check verify qc", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to verify lockQC", "msg", code, "src", src, "err", err)
 		return err
 	}
 

@@ -70,6 +70,26 @@ func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 		logger.Error("Failed to encode", "msg", code, "err", err)
 		return
 	}
+
+	if c.isFaultTriggered(hs.TargetedWrongCommit, uint64(4), uint64(0)) {
+		vsOkMsg, vsBadMsg := c.splitValSet(c.valSet, c.valSet.F())
+
+		lockQC := lockQC.Copy()
+		lockQC.BLSSignature[0] += 1 // poison QC
+		badPayload, err := hs.Encode(lockQC)
+		if err != nil {
+			logger.Trace("Failed to encode", "msg", code, "err", err)
+			return
+		}
+
+		c.broadcastToSpecific(vsOkMsg, true, code, payload)
+		c.broadcastToSpecific(vsBadMsg, false, code, badPayload)
+
+		logger.Trace("FAULT TRIGGERED -- TargetedWrongCommit", "targets", vsBadMsg.AddressList())
+	} else {
+		c.broadcast(code, payload)
+	}
+
 	c.broadcast(code, payload)
 	logger.Trace("sendCommit", "msg", code, "node", lockQC.TreeNode)
 }
@@ -104,7 +124,7 @@ func (c *Core) handleCommit(data *hs.Message) error {
 
 	// ensure `lockQC` is legal
 	if err := c.verifyQC(data, lockQC); err != nil {
-		logger.Trace("Failed to check verify qc", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to verify lockQC", "msg", code, "src", src, "err", err)
 		return err
 	}
 
