@@ -129,7 +129,7 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	}
 
 	// ensure the block hash is the correct one
-	// [NOTE] Compared filtered headers! Does not include seal
+	// [NOTE] Header comparison does not include seal
 	blockHash := msg.BlockHash
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {
@@ -151,11 +151,6 @@ func (c *Core) handleDecide(data *hs.Message) error {
 		return hs.ErrInvalidBlock
 	}
 
-	// // [TODO] Seal block with BLS Aggregated Sig of PrepareQC
-	// if err := c.signer.VerifyBlockBLSSig(); err != nil {
-	// 	logger.Trace("Failed to verify aggsig'd block", "msg", code, "src", src, "err", err)
-	// 	return hs.ErrInvalidQC
-	// }
 	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.TreeNode)
 
 	// accept commitQC and commit block to miner
@@ -166,7 +161,6 @@ func (c *Core) handleDecide(data *hs.Message) error {
 		}
 	}
 	if !c.IsProposer() && c.currentState() == hs.StatePreCommitted {
-		// [TODO] Seal block with BLS Aggregated Sig of PrepareQC
 		sealedBlock, err := c.backend.SealBlock(lockedBlock, commitQC)
 		if err != nil {
 			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)

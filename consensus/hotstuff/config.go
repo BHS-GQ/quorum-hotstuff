@@ -17,6 +17,8 @@ const (
 	TargetedWrongPreCommit
 	// Leader sends faulty PreCommit message to <=F replicas
 	TargetedWrongCommit
+	// Leader faulty-seals block but has a good decide
+	WrongDecide
 )
 
 func (f FaultyMode) Uint64() uint64 {
@@ -31,6 +33,8 @@ func (f FaultyMode) String() string {
 		return "TargetedWrongPreCommit"
 	case TargetedWrongCommit:
 		return "TargetedWrongCommit"
+	case WrongDecide:
+		return "WrongDecide"
 	default:
 		return "Undefined"
 	}
@@ -52,5 +56,5 @@ var DefaultBasicConfig = &Config{
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,
-	FaultyMode:     TargetedWrongCommit.Uint64(),
+	FaultyMode:     WrongDecide.Uint64(),
 }
