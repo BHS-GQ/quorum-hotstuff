@@ -14,11 +14,11 @@ const (
 	// Disabled disables the faulty mode
 	Disabled FaultyMode = iota
 	// Leader sends faulty PreCommit message to <=F replicas
-	TargetedWrongPreCommit
+	TargetedBadPreCommit
 	// Leader sends faulty PreCommit message to <=F replicas
-	TargetedWrongCommit
+	TargetedBadCommit
 	// Leader faulty-seals block but has a good decide
-	WrongDecide
+	BadDecide
 )
 
 func (f FaultyMode) Uint64() uint64 {
@@ -29,12 +29,12 @@ func (f FaultyMode) String() string {
 	switch f {
 	case Disabled:
 		return "Disabled"
-	case TargetedWrongPreCommit:
-		return "TargetedWrongPreCommit"
-	case TargetedWrongCommit:
-		return "TargetedWrongCommit"
-	case WrongDecide:
-		return "WrongDecide"
+	case TargetedBadPreCommit:
+		return "TargetedBadPreCommit"
+	case TargetedBadCommit:
+		return "TargetedBadCommit"
+	case BadDecide:
+		return "BadDecide"
 	default:
 		return "Undefined"
 	}
@@ -56,5 +56,5 @@ var DefaultBasicConfig = &Config{
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,
-	FaultyMode:     WrongDecide.Uint64(),
+	FaultyMode:     Disabled.Uint64(),
 }

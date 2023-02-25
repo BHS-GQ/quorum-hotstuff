@@ -71,7 +71,7 @@ func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 		return
 	}
 
-	if c.isFaultTriggered(hs.TargetedWrongCommit, uint64(4), uint64(0)) {
+	if c.isFaultTriggered(hs.TargetedBadCommit, uint64(4), uint64(0)) {
 		vsOkMsg, vsBadMsg := c.splitValSet(c.valSet, c.valSet.F())
 
 		lockQC := lockQC.Copy()

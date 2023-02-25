@@ -75,7 +75,7 @@ func (c *Core) sendPreCommit(prepareQC *hs.QuorumCert) {
 		return
 	}
 
-	if c.isFaultTriggered(hs.TargetedWrongPreCommit, uint64(4), uint64(0)) {
+	if c.isFaultTriggered(hs.TargetedBadPreCommit, uint64(4), uint64(0)) {
 		vsOkMsg, vsBadMsg := c.splitValSet(c.valSet, c.valSet.F())
 
 		badPrepareQC := prepareQC.Copy()
