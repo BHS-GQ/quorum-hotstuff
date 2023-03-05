@@ -268,11 +268,8 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if header.Time < parent.Time {
+	if header.Time > parent.Time+s.config.BlockPeriod && header.Time > uint64(now().Unix()) {
 		return hs.ErrInvalidTimestamp
-	}
-	if header.Time > uint64(now().Unix()) {
-		return consensus.ErrFutureBlock
 	}
 
 	// [TODO] Verify validators in extraData. Validators in snapshot and extraData should be the same.
