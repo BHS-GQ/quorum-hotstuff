@@ -134,9 +134,19 @@ func (s *Backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	}
 	block = block.WithSeal(header)
 
-	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
+	delay := time.Until(time.Unix(int64(block.Header().Time), 0))
+
+	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number(), "delay", delay.Seconds())
 
 	go func() {
+		// wait for the timestamp of header, use this to adjust the block period
+		select {
+		case <-time.After(delay):
+		case <-stop:
+			results <- nil
+			return
+		}
+
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
 		s.proposedBlockHash = block.Hash()
@@ -258,7 +268,6 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return nil
 	}
 
-	// Ensure that the block's timestamp isn't too close to it's parent
 	var parent *types.Header
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
@@ -268,7 +277,13 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if header.Time > parent.Time+s.config.BlockPeriod && header.Time > uint64(now().Unix()) {
+
+	if header.Time > uint64(now().Unix()) {
+		return consensus.ErrFutureBlock
+	}
+
+	if header.Time < parent.Time+s.config.BlockPeriod {
+		s.logger.Debug("TIME DIFF", "header", header.Time, "parent + BP", parent.Time+s.config.BlockPeriod)
 		return hs.ErrInvalidTimestamp
 	}
 
