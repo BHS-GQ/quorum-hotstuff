@@ -279,7 +279,7 @@ func (s *Backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	}
 
 	if header.Time > uint64(now().Unix()) {
-		return consensus.ErrFutureBlock
+		return hs.ErrInvalidTimestamp
 	}
 
 	if header.Time < parent.Time+s.config.BlockPeriod {
