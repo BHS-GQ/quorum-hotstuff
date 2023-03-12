@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/metrics"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -225,20 +224,6 @@ func handleMessage(backend Backend, peer *Peer) error {
 		return fmt.Errorf("%w: %v > %v", errMsgTooLarge, msg.Size, maxMessageSize)
 	}
 	defer msg.Discard()
-
-	// HotStuff - Hacky expose consensus.Handler
-	// [TODO] Check if this works with Istanbul
-	if handler, ok := backend.Engine().(consensus.Handler); ok {
-		pubKey := peer.Node().Pubkey()
-		addr := crypto.PubkeyToAddress(*pubKey)
-		handled, err := handler.HandleMsg(addr, msg)
-
-		// Hacky; HandleMsg return true, nil upon err
-		if handled {
-			return err
-		}
-	}
-	// /HotStuff
 
 	var handlers = eth65
 	if peer.Version() >= ETH66 {
