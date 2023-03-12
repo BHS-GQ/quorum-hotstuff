@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/clique"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -395,6 +396,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData, eth.blockchain.Config().IsQuorum))
 
+	// HotStuff - Set miner recommit time value as hotstuff block period duration
+	if eth.handler.getConsensusAlgorithm() == "hotstuff" {
+		defaultRecommitTime := time.Second * time.Duration(hotstuff.DefaultBasicConfig.BlockPeriod)
+		eth.miner.SetRecommitInterval(defaultRecommitTime)
+	}
+	// /HotStuff
+
 	// Quorum
 	hexNodeId := fmt.Sprintf("%x", crypto.FromECDSAPub(&stack.GetNodeKey().PublicKey)[1:])
 	node, err := enode.ParseV4(hexNodeId)
@@ -671,7 +679,7 @@ func (s *Ethereum) shouldPreserve(block *types.Block) bool {
 func (s *Ethereum) SetEtherbase(etherbase common.Address) bool {
 	//Quorum
 	consensusAlgo := s.handler.getConsensusAlgorithm()
-	if consensusAlgo == "istanbul" || consensusAlgo == "clique" || consensusAlgo == "raft" {
+	if consensusAlgo == "istanbul" || consensusAlgo == "hotstuff" || consensusAlgo == "clique" || consensusAlgo == "raft" {
 		log.Error("Cannot set etherbase with selected consensus mechanism")
 		return false
 	}

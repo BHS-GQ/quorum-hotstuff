@@ -680,6 +680,8 @@ func (h *handler) getConsensusAlgorithm() string {
 		switch h.engine.(type) {
 		case consensus.Istanbul:
 			consensusAlgo = "istanbul"
+		case consensus.HotStuff:
+			consensusAlgo = "hotstuff"
 		case *clique.Clique:
 			consensusAlgo = "clique"
 		case *ethash.Ethash:
