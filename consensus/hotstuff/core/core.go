@@ -43,7 +43,7 @@ type Core struct {
 
 // New creates an HotStuff consensus core
 func New(backend hs.Backend, config *hs.Config, signer hs.Signer, db ethdb.Database, valSet hs.ValidatorSet) hs.CoreEngine {
-	if config.FaultyMode != hs.Disabled.Uint64() {
+	if config.FaultyMode != hs.Disabled {
 		return faulty.New(backend, config, signer, db, valSet)
 	}
 	c := &Core{

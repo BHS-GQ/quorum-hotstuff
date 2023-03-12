@@ -389,8 +389,12 @@ func (c *EthashConfig) String() string {
 }
 
 // HotStuff
-// [TODO] Fill config
-type HotStuffConfig struct{}
+type HotStuffConfig struct {
+	RequestTimeoutMilliseconds uint64 `json:"requesttimeoutmilliseconds"` // The timeout for each HotStuff round in milliseconds.
+	BlockPeriodSeconds         uint64 `json:"blockperiodseconds"`         // Default minimum difference between two consecutive block's timestamps in second for basic hotstuff and mill-seconds for event-driven
+	LeaderPolicy               string `json:"policy"`                     // The policy for speaker selection
+	FaultyMode                 string `json:"faultymode"`                 // The faulty node indicates the faulty node's behavior
+}
 
 // String implements the stringer interface, returning the consensus engine details.
 func (c *HotStuffConfig) String() string {

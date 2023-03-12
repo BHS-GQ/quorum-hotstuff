@@ -7,7 +7,7 @@ import (
 
 func (c *Core) isFaultTriggered(fault hs.FaultyMode, h uint64, r uint64) bool {
 	ch, cr := c.CurrentSequence()
-	return c.config.FaultyMode == fault.Uint64() &&
+	return c.config.FaultyMode == fault &&
 		ch == h &&
 		cr == r
 }

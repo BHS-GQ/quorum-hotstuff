@@ -33,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -398,7 +397,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 
 	// HotStuff - Set miner recommit time value as hotstuff block period duration
 	if eth.handler.getConsensusAlgorithm() == "hotstuff" {
-		defaultRecommitTime := time.Second * time.Duration(hotstuff.DefaultBasicConfig.BlockPeriod)
+		defaultRecommitTime := time.Second * time.Duration(chainConfig.HotStuff.BlockPeriodSeconds)
 		eth.miner.SetRecommitInterval(defaultRecommitTime)
 	}
 	// /HotStuff

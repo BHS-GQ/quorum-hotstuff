@@ -99,6 +99,7 @@ var Defaults = Config{
 
 	// Quorum
 	Istanbul: *istanbul.DefaultConfig, // Quorum
+	HotStuff: *hotstuff.DefaultBasicConfig,
 }
 
 func init() {
@@ -245,7 +246,12 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	}
 	// HotStuff
 	if chainConfig.HotStuff != nil {
-		config := hotstuff.DefaultBasicConfig
+		// Set config
+		config.HotStuff.BlockPeriod = chainConfig.HotStuff.BlockPeriodSeconds
+		config.HotStuff.LeaderPolicy = hotstuff.SelectProposerPolicy(chainConfig.HotStuff.LeaderPolicy)
+		config.HotStuff.RequestTimeout = chainConfig.HotStuff.RequestTimeoutMilliseconds
+		config.HotStuff.FaultyMode = hotstuff.FaultyMode(chainConfig.HotStuff.FaultyMode)
+
 		nodeKey := stack.Config().NodeKey()
 		genesisNodeList := stack.Config().StaticNodes()
 
@@ -255,7 +261,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 			pubkey := v.Pubkey()
 			validators = append(validators, crypto.PubkeyToAddress(*pubkey))
 		}
-		valset := validator.NewSet(validators, hotstuff.RoundRobin)
+		valset := validator.NewSet(validators, config.HotStuff.LeaderPolicy)
 
 		// Get BLS keys
 		n := valset.Size()
@@ -270,7 +276,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 			BLSPrivKey: blsPrivKey,
 		}
 
-		return hotstuffBackend.New(config, nodeKey, db, valset, blsInfo)
+		return hotstuffBackend.New(&config.HotStuff, nodeKey, db, valset, blsInfo)
 	}
 	// /HotStuff
 
