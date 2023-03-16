@@ -17,7 +17,6 @@
 package validator
 
 import (
-	"math"
 	"reflect"
 	"sort"
 	"sync"
@@ -223,8 +222,8 @@ func (valSet *defaultSet) Copy() hs.ValidatorSet {
 	return NewSet(addresses, valSet.policy)
 }
 
-func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
+func (valSet *defaultSet) F() int { return (valSet.Size() - 1) / 3 }
 
-func (valSet *defaultSet) Q() int { return valSet.F()*2 + 1 }
+func (valSet *defaultSet) Q() int { return valSet.Size() - valSet.F() }
 
 func (valSet *defaultSet) Policy() hs.SelectProposerPolicy { return valSet.policy }
