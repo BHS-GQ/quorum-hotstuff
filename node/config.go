@@ -51,8 +51,8 @@ const (
 	datadirStaticNodes     = "static-nodes.json"  // Path within the datadir to the static node list
 	datadirTrustedNodes    = "trusted-nodes.json" // Path within the datadir to the trusted node list
 	datadirNodeDatabase    = "nodes"              // Path within the datadir to store the node infos
-	datadirBLSPrivateKey   = "bls_private_key.conf"
-	datadirBLSPublicKey    = "bls_public_key.conf"
+	datadirBLSPrivateKey   = "bls-private-key.json"
+	datadirBLSPublicKey    = "bls-public-key.json"
 )
 
 // Config represents a small collection of configuration values to fine tune the
@@ -338,8 +338,8 @@ var isOldGethResource = map[string]bool{
 	"chaindata":            true,
 	"nodes":                true,
 	"nodekey":              true,
-	"bls_private_key.conf": true,
-	"bls_public_key.conf":  true,
+	"bls-private-key.json": true,
+	"bls-public-key.json":  true,
 	"static-nodes.json":    false, // no warning for these because they have their
 	"trusted-nodes.json":   false, // own separate warning.
 }
