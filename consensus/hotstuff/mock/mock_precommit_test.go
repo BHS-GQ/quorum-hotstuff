@@ -364,7 +364,7 @@ func TestMockPreCommitCase6(t *testing.T) {
 				log.Error("failed to decode prepareQC", "err", err)
 				return data, true
 			}
-			qc.TreeNode = common.HexToHash("0x12345")
+			qc.CmdNode = common.HexToHash("0x12345")
 			if raw, err := rlp.EncodeToBytes(&qc); err != nil {
 				log.Error("failed to encode prepareQC", "err", err)
 				return data, true

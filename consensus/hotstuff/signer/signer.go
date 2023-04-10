@@ -98,9 +98,9 @@ func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
 
 	// check proposer signature
 	data, _ := hs.Encode(&hs.Vote{
-		Code:     qc.Code,
-		View:     qc.View,
-		TreeNode: qc.TreeNode,
+		Code:    qc.Code,
+		View:    qc.View,
+		CmdNode: qc.CmdNode,
 	})
 	if err := s.BLSVerifyAggSig(data, qc.BLSSignature); err != nil {
 		return err

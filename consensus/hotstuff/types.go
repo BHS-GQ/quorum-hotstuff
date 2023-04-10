@@ -186,28 +186,28 @@ func (v *View) Sub(y *View) (int64, int64) {
 	return h, r
 }
 
-type TreeNode struct {
+type CmdNode struct {
 	hash common.Hash
 
-	Parent common.Hash  // Parent TreeTreeNode hash
+	Parent common.Hash  // Parent CmdNode hash
 	Block  *types.Block // Command to agree on
 }
 
-func NewTreeNode(parent common.Hash, block *types.Block) *TreeNode {
-	TreeNode := &TreeNode{
+func NewCmdNode(parent common.Hash, block *types.Block) *CmdNode {
+	CmdNode := &CmdNode{
 		Parent: parent,
 		Block:  block,
 	}
-	TreeNode.Hash()
-	return TreeNode
+	CmdNode.Hash()
+	return CmdNode
 }
 
-func (n *TreeNode) EncodeRLP(w io.Writer) error {
+func (n *CmdNode) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{n.Parent, n.Block})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (n *TreeNode) DecodeRLP(s *rlp.Stream) error {
+func (n *CmdNode) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		Parent common.Hash
 		Block  *types.Block
@@ -221,28 +221,28 @@ func (n *TreeNode) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (n *TreeNode) Hash() common.Hash {
+func (n *CmdNode) Hash() common.Hash {
 	if n.hash == EmptyHash {
 		n.hash = RLPHash([]common.Hash{n.Parent, n.Block.Hash()})
 	}
 	return n.hash
 }
 
-func (n *TreeNode) String() string {
-	return fmt.Sprintf("{TreeNode: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
+func (n *CmdNode) String() string {
+	return fmt.Sprintf("{CmdNode: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
 }
 
 type QuorumCert struct {
 	View         *View
 	Code         MsgType
-	TreeNode     common.Hash // TreeNode hash NOT Block hash
+	CmdNode      common.Hash // CmdNode hash NOT Block hash
 	Proposer     common.Address
 	BLSSignature []byte
 }
 
 // Hash retrieve message hash but not proposal hash
 func (qc *QuorumCert) SealHash() common.Hash {
-	msg := NewCleanMessage(qc.View, qc.Code, qc.TreeNode.Bytes())
+	msg := NewCleanMessage(qc.View, qc.Code, qc.CmdNode.Bytes())
 	msg.PayloadNoSig() // check if encodable
 	return msg.hash
 }
@@ -250,7 +250,7 @@ func (qc *QuorumCert) SealHash() common.Hash {
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
 	code := qc.Code.Value()
-	return rlp.Encode(w, []interface{}{qc.View, code, qc.TreeNode, qc.Proposer, qc.BLSSignature})
+	return rlp.Encode(w, []interface{}{qc.View, code, qc.CmdNode, qc.Proposer, qc.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -258,7 +258,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		View         *View
 		Code         MsgType
-		TreeNode     common.Hash
+		CmdNode      common.Hash
 		Proposer     common.Address
 		BLSSignature []byte
 	}
@@ -267,7 +267,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	qc.View, qc.Code, qc.TreeNode, qc.Proposer, qc.BLSSignature = data.View, data.Code, data.TreeNode, data.Proposer, data.BLSSignature
+	qc.View, qc.Code, qc.CmdNode, qc.Proposer, qc.BLSSignature = data.View, data.Code, data.CmdNode, data.Proposer, data.BLSSignature
 	return nil
 }
 
@@ -294,7 +294,7 @@ func (qc *QuorumCert) RoundU64() uint64 {
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.TreeNode.String(), qc.Proposer.Hex())
+	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.CmdNode.String(), qc.Proposer.Hex())
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {
@@ -442,24 +442,24 @@ func (m *Message) String() string {
 }
 
 type Vote struct {
-	Code     MsgType
-	View     *View
-	TreeNode common.Hash // Hash of Proposal/Block
+	Code    MsgType
+	View    *View
+	CmdNode common.Hash // Hash of Proposal/Block
 
 	BLSSignature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.Code, b.View, b.TreeNode, b.BLSSignature})
+	return rlp.Encode(w, []interface{}{b.Code, b.View, b.CmdNode, b.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Code     MsgType
-		View     *View
-		TreeNode common.Hash
+		Code    MsgType
+		View    *View
+		CmdNode common.Hash
 
 		BLSSignature []byte
 	}
@@ -467,32 +467,32 @@ func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	b.Code, b.View, b.TreeNode, b.BLSSignature = data.Code, data.View, data.TreeNode, data.BLSSignature
+	b.Code, b.View, b.CmdNode, b.BLSSignature = data.Code, data.View, data.CmdNode, data.BLSSignature
 	return nil
 }
 
 func (b *Vote) String() string {
-	return fmt.Sprintf("{Code: %v, View: %v, TreeNode: %v}", b.Code.String(), b.View, b.TreeNode.String())
+	return fmt.Sprintf("{Code: %v, View: %v, CmdNode: %v}", b.Code.String(), b.View, b.CmdNode.String())
 }
 
 func (b *Vote) Unsigned() *Vote {
 	return &Vote{
 		Code:         b.Code,
 		View:         b.View,
-		TreeNode:     b.TreeNode,
+		CmdNode:      b.CmdNode,
 		BLSSignature: []byte{},
 	}
 }
 
 type PackagedQC struct {
-	TreeNode *TreeNode
-	QC       *QuorumCert // QuorumCert only contains Proposal's hash
+	CmdNode *CmdNode
+	QC      *QuorumCert // QuorumCert only contains Proposal's hash
 }
 
-func NewPackagedQC(node *TreeNode, qc *QuorumCert) *PackagedQC {
+func NewPackagedQC(node *CmdNode, qc *QuorumCert) *PackagedQC {
 	return &PackagedQC{
-		TreeNode: node,
-		QC:       qc,
+		CmdNode: node,
+		QC:      qc,
 	}
 }
 

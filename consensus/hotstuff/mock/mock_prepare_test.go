@@ -165,10 +165,10 @@ func TestMockPrepareCase3(t *testing.T) {
 			}
 			qc.View.Height = new(big.Int).SetUint64(fH)
 			var newSub = struct {
-				TreeNode *hs.TreeNode
+				CmdNode *hs.CmdNode
 				QC       *hs.QuorumCert
 			}{
-				sub.TreeNode,
+				sub.CmdNode,
 				&qc,
 			}
 			if raw, err := rlp.EncodeToBytes(newSub); err != nil {
@@ -248,10 +248,10 @@ func TestMockPrepareCase4(t *testing.T) {
 			}
 			qc.View.Round = new(big.Int).SetUint64(fR)
 			var newSub = struct {
-				Node *hs.TreeNode
+				Node *hs.CmdNode
 				QC   *hs.QuorumCert
 			}{
-				sub.TreeNode,
+				sub.CmdNode,
 				&qc,
 			}
 			if raw, err := rlp.EncodeToBytes(newSub); err != nil {
@@ -329,12 +329,12 @@ func TestMockPrepareCase5(t *testing.T) {
 				log.Error("failed to decode prepareQC", "err", err)
 				return data, true
 			}
-			qc.TreeNode = common.HexToHash("0x124")
+			qc.CmdNode = common.HexToHash("0x124")
 			var newSub = struct {
-				Node *hs.TreeNode
+				Node *hs.CmdNode
 				QC   *hs.QuorumCert
 			}{
-				sub.TreeNode,
+				sub.CmdNode,
 				&qc,
 			}
 			if raw, err := rlp.EncodeToBytes(newSub); err != nil {
@@ -419,10 +419,10 @@ func TestMockPrepareCase6(t *testing.T) {
 			qc.BLSSignature[0] += 1
 
 			var newSub = struct {
-				Node *hs.TreeNode
+				Node *hs.CmdNode
 				QC   *hs.QuorumCert
 			}{
-				sub.TreeNode,
+				sub.CmdNode,
 				&qc,
 			}
 			if raw, err := rlp.EncodeToBytes(newSub); err != nil {

@@ -42,7 +42,7 @@ func (c *Core) IsCurrentProposal(blockHash common.Hash) bool {
 	if c.current == nil {
 		return false
 	}
-	if proposal := c.current.TreeNode(); proposal != nil && proposal.Hash() == blockHash {
+	if proposal := c.current.CmdNode(); proposal != nil && proposal.Hash() == blockHash {
 		return true
 	}
 	if req := c.current.PendingRequest(); req != nil && req.Block != nil && req.Block.Hash() == blockHash {

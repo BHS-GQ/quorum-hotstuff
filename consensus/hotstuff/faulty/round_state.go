@@ -38,7 +38,7 @@ type roundState struct {
 
 	lastChainedBlock *types.Block
 	pendingRequest   *hs.Request
-	node             *hs.TreeNode
+	node             *hs.CmdNode
 	lockedBlock      *types.Block // validator's prepare proposal
 	executed         *consensus.ExecutedBlock
 	proposalLocked   bool
@@ -64,7 +64,7 @@ func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hs.Validat
 		round:            view.Round,
 		height:           view.Height,
 		state:            hs.StateAcceptRequest,
-		node:             new(hs.TreeNode),
+		node:             new(hs.CmdNode),
 		lastChainedBlock: lastChainedBlock,
 		newViews:         NewMessageSet(validatorSet),
 		prepareVotes:     NewMessageSet(validatorSet),
@@ -134,7 +134,7 @@ func (s *roundState) PendingRequest() *hs.Request {
 	return s.pendingRequest
 }
 
-func (s *roundState) SetTreeNode(node *hs.TreeNode) error {
+func (s *roundState) SetCmdNode(node *hs.CmdNode) error {
 	if node == nil || node.Block == nil {
 		return hs.ErrInvalidNode
 	}
@@ -143,7 +143,7 @@ func (s *roundState) SetTreeNode(node *hs.TreeNode) error {
 	return nil
 }
 
-func (s *roundState) TreeNode() *hs.TreeNode {
+func (s *roundState) CmdNode() *hs.CmdNode {
 	return s.node
 }
 
@@ -206,7 +206,7 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 }
 
 func (s *roundState) UnsignedVote(code hs.MsgType) *hs.Vote {
-	node := s.TreeNode()
+	node := s.CmdNode()
 	if node == nil || node.Hash() == hs.EmptyHash {
 		return nil
 	}
@@ -218,7 +218,7 @@ func (s *roundState) UnsignedVote(code hs.MsgType) *hs.Vote {
 			Round:  new(big.Int).Set(s.round),
 			Height: new(big.Int).Set(s.height),
 		},
-		TreeNode:     node.Hash(), // Instead of sending entire block, use hash
+		CmdNode:      node.Hash(), // Instead of sending entire block, use hash
 		BLSSignature: []byte{},    // Sign later
 	}
 
@@ -350,7 +350,7 @@ func (s *roundState) reload(view *hs.View) {
 	}
 
 	// reset locked node
-	if s.lockQC != nil && s.node != nil && s.node.Block != nil && s.lockQC.TreeNode == s.node.Hash() {
+	if s.lockQC != nil && s.node != nil && s.node.Block != nil && s.lockQC.CmdNode == s.node.Hash() {
 		s.lockedBlock = s.node.Block
 		s.proposalLocked = true
 	}
@@ -475,7 +475,7 @@ func (s *roundState) loadCommitQC() error {
 	return nil
 }
 
-func (s *roundState) storeNode(node *hs.TreeNode) error {
+func (s *roundState) storeNode(node *hs.CmdNode) error {
 	if s.db == nil {
 		return nil
 	}
@@ -492,7 +492,7 @@ func (s *roundState) loadNode() error {
 		return nil
 	}
 
-	data := new(hs.TreeNode)
+	data := new(hs.CmdNode)
 	raw, err := s.db.Get(nodeKey())
 	if err != nil {
 		return err
