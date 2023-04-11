@@ -37,7 +37,6 @@ import (
 	istanbulBackend "github.com/ethereum/go-ethereum/consensus/istanbul/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -253,15 +252,8 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		config.HotStuff.FaultyMode = hotstuff.FaultyMode(chainConfig.HotStuff.FaultyMode)
 
 		nodeKey := stack.Config().NodeKey()
-		genesisNodeList := stack.Config().StaticNodes()
 
-		// Generate validators set from static-nodes.json
-		validators := make([]common.Address, 0)
-		for _, v := range genesisNodeList {
-			pubkey := v.Pubkey()
-			validators = append(validators, crypto.PubkeyToAddress(*pubkey))
-		}
-		valset := validator.NewSet(validators, config.HotStuff.LeaderPolicy)
+		valset := validator.NewSet(chainConfig.HotStuff.Validators, config.HotStuff.LeaderPolicy)
 
 		// Get BLS keys
 		n := valset.Size()
