@@ -189,7 +189,7 @@ func (s *Backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64,
 
 func (s *Backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
-		Namespace: "HotStuff",
+		Namespace: "hotstuff",
 		Version:   "1.0",
 		Service:   &API{chain: chain, hotstuff: s},
 		Public:    true,

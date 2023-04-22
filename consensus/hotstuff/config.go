@@ -12,9 +12,9 @@ type FaultyMode string
 
 const (
 	Disabled             FaultyMode = "Disabled"             // Disabled disables the faulty mode
-	TargetedBadPreCommit FaultyMode = "TargetedBadPreCommit" // Leader sends faulty PreCommit message to <=F replicas
-	TargetedBadCommit    FaultyMode = "TargetedBadCommit"    // Leader sends faulty PreCommit message to <=F replicas
-	BadDecide            FaultyMode = "BadDecide"            // Leader faulty-seals block but has a good decide
+	TargetedBadPreCommit FaultyMode = "TargetedBadPreCommit" // Leader sends faulty PreCommit message to < F replicas
+	TargetedBadCommit    FaultyMode = "TargetedBadCommit"    // Leader sends faulty Commit message to < F replicas
+	BadDecideBadBlock    FaultyMode = "GoodDecideBadBlock"   // Leader faulty-seals block but has a good decide
 )
 
 type Config struct {

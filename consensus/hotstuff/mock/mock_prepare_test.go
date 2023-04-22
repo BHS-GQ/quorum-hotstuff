@@ -166,7 +166,7 @@ func TestMockPrepareCase3(t *testing.T) {
 			qc.View.Height = new(big.Int).SetUint64(fH)
 			var newSub = struct {
 				CmdNode *hs.CmdNode
-				QC       *hs.QuorumCert
+				QC      *hs.QuorumCert
 			}{
 				sub.CmdNode,
 				&qc,

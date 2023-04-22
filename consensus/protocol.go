@@ -19,15 +19,13 @@ const (
 	Istanbul99 = 99
 	// this istanbul subprotocol will be registered in addition to "eth"
 	Istanbul100 = 100
-
-	Hotstuff67 = 67
 )
 
 var (
 	HotstuffProtocol = Protocol{
-		Name:     "hotstuff",
-		Versions: []uint{Hotstuff67},
-		Lengths:  map[uint]uint64{Hotstuff67: 18},
+		Name:     "istanbul",
+		Versions: []uint{Istanbul100, Istanbul99, Istanbul64},
+		Lengths:  map[uint]uint64{Istanbul100: 22, Istanbul99: 18, Istanbul64: 18},
 	}
 
 	IstanbulProtocol = Protocol{

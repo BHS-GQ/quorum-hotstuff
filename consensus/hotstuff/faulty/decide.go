@@ -64,7 +64,7 @@ func (c *Core) handleCommitVote(data *hs.Message) error {
 			return err
 		}
 
-		if c.isFaultTriggered(hs.BadDecide, uint64(4), uint64(0)) {
+		if c.isFaultTriggered(hs.BadDecideBadBlock, uint64(4), uint64(0)) {
 			logger.Trace("FAULT TRIGGERED -- Send WrongDecide")
 
 			// Leader sends bad QuorumCert; we ruin BLSSignature
@@ -118,7 +118,7 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	)
 
 	// Accept bad QuorumCert and start new round
-	if c.isFaultTriggered(hs.BadDecide, uint64(4), uint64(0)) && c.IsProposer() {
+	if c.isFaultTriggered(hs.BadDecideBadBlock, uint64(4), uint64(0)) && c.IsProposer() {
 		logger.Trace("FAULT TRIGGERED -- Accept WrongDecide")
 		if err := c.commit(c.current.LockedBlock()); err != nil {
 			logger.Trace("Failed to commit proposal", "msg", code, "err", err)
