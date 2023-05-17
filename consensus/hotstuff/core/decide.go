@@ -25,54 +25,54 @@ func (c *Core) handleCommitVote(data *hs.Message) error {
 
 	// check message
 	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to decode", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkView(data.View); err != nil {
-		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check view", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkMsgDest(); err != nil {
-		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check proposer", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkVote(vote, hs.MsgTypeCommitVote); err != nil {
-		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check vote", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 
 	// check locked block's committed seals
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {
-		logger.Trace("Failed to get lockBlock", "msg", code, "src", src, "err", "block is nil")
+		logger.Trace("Failed to get lockBlock", "msgCode", code, "src", src, "err", "block is nil")
 		return hs.ErrInvalidNode
 	}
 
 	// queue vote into messageSet to ensure that at least 2/3 validator vote at the same step.
 	if err := c.current.AddCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to add vote", "msgCode", code, "src", src, "err", err)
 		return hs.ErrAddPreCommitVote
 	}
 
-	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote)
+	logger.Trace("handleCommitVote", "msgCode", code, "src", src, "hash", vote)
 
 	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
 	if size := c.current.CommitVoteSize(); size >= c.valSet.Q() && c.currentState() == hs.StatePreCommitted {
 		commitQC, err := c.messagesToQC(code)
 		if err != nil {
-			logger.Trace("Failed to assemble commitQC", "msg", code, "err", err)
+			logger.Trace("Failed to assemble commitQC", "msgCode", code, "err", err)
 			return err
 		}
 		sealedBlock, err := c.backend.SealBlock(lockedBlock, commitQC)
 		if err != nil {
-			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+			logger.Trace("Failed to assemble committed proposal", "msgCode", code, "err", err)
 			return err
 		}
 		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
-			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
+			logger.Trace("Failed to accept commitQC", "msgCode", code, "err", err)
 			return err
 		}
-		logger.Trace("acceptCommit", "msg", code, "msgSize", size)
+		logger.Trace("acceptCommit", "msgCode", code, "msgSize", size)
 
 		c.sendDecide(sealedBlock.Hash(), commitQC)
 	}
@@ -90,12 +90,12 @@ func (c *Core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	}
 	payload, err := hs.Encode(msg)
 	if err != nil {
-		logger.Trace("Failed to encode", "msg", code, "err", err)
+		logger.Trace("Failed to encode", "msgCode", code, "err", err)
 		return
 	}
 	c.broadcast(code, payload)
 
-	logger.Trace("sendDecide", "msg", code, "node", commitQC.CmdNode)
+	logger.Trace("sendDecide", "msgCode", code, "node", commitQC.CmdNode)
 }
 
 // handleDecide repo receive MsgDecide and try to commit the final block.
@@ -109,22 +109,22 @@ func (c *Core) handleDecide(data *hs.Message) error {
 
 	// check message
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to decode", "msgCode", code, "src", src, "err", err)
 		return hs.ErrFailedDecodeCommit
 	}
 	if err := c.checkView(data.View); err != nil {
-		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check view", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkMsgSource(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check proposer", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 
 	// ensure commitQC is legal
 	commitQC := msg.CommitQC
 	if err := c.verifyQC(data, commitQC); err != nil {
-		logger.Trace("Failed to verify commitQC", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to verify commitQC", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 
@@ -133,10 +133,10 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	blockHash := msg.BlockHash
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {
-		logger.Trace("Locked block is nil", "msg", code, "src", src)
+		logger.Trace("Locked block is nil", "msgCode", code, "src", src)
 		return hs.ErrInvalidBlock
 	} else if blockHash == hs.EmptyHash || lockedBlock.Hash() != blockHash {
-		logger.Trace("Failed to check block hash", "msg", code, "src", src, "expect block", lockedBlock.Hash(), "got", blockHash)
+		logger.Trace("Failed to check block hash", "msgCode", code, "src", src, "expect block", lockedBlock.Hash(), "got", blockHash)
 		return hs.ErrInvalidBlock
 	}
 
@@ -151,23 +151,23 @@ func (c *Core) handleDecide(data *hs.Message) error {
 		return hs.ErrInvalidBlock
 	}
 
-	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.CmdNode)
+	logger.Trace("handleDecide", "msgCode", code, "src", src, "node", commitQC.CmdNode)
 
 	// accept commitQC and commit block to miner
 	if c.IsProposer() && c.currentState() == hs.StateCommitted {
 		if err := c.commit(c.current.LockedBlock()); err != nil {
-			logger.Trace("Failed to commit proposal", "msg", code, "err", err)
+			logger.Trace("Failed to commit proposal", "msgCode", code, "err", err)
 			return err
 		}
 	}
 	if !c.IsProposer() && c.currentState() == hs.StatePreCommitted {
 		sealedBlock, err := c.backend.SealBlock(lockedBlock, commitQC)
 		if err != nil {
-			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+			logger.Trace("Failed to assemble committed proposal", "msgCode", code, "err", err)
 			return err
 		}
 		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
-			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
+			logger.Trace("Failed to accept commitQC", "msgCode", code, "err", err)
 			return err
 		}
 		if err := c.commit(sealedBlock); err != nil {

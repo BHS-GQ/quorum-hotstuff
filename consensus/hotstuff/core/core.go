@@ -124,7 +124,7 @@ func (c *Core) startNewRound(round *big.Int) {
 		}
 	}
 
-	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
+	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
 	// stop last timer and regenerate new timer
 	c.newRoundChangeTimer()

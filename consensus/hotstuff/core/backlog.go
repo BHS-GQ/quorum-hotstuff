@@ -21,7 +21,7 @@ func (c *Core) storeBacklog(msg *hs.Message) {
 		return
 	}
 
-	logger.Trace("Retrieving backlog queue", "msg", msg.Code, "src", src, "backlogs_size", c.backlogs.Size(src))
+	logger.Trace("Retrieving backlog queue", "msgCode", msg.Code, "src", src, "backlogs_size", c.backlogs.Size(src))
 
 	c.backlogs.Push(msg)
 }
@@ -60,7 +60,7 @@ func (c *Core) processBacklog() {
 				continue
 			}
 
-			logger.Trace("Replay the backlog", "msg", msg)
+			logger.Trace("Replay the backlog", "msgCode", msg)
 			go c.sendEvent(backlogEvent{src: src, msg: msg})
 		}
 	}

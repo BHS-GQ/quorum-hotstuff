@@ -183,29 +183,29 @@ func (c *Core) sendVote(code hs.MsgType) {
 	// Fetch and sign vote
 	vote := c.current.UnsignedVote(code)
 	if vote == nil {
-		logger.Error("Failed to send vote", "msg", code, "err", "current vote is nil")
+		logger.Error("Failed to send vote", "msgCode", code, "err", "current vote is nil")
 		return
 	}
 	unsignedVoteBytes, err := hs.Encode(vote)
 	if err != nil {
-		logger.Error("Failed to send vote", "msg", code, "err", "could not encode unsigned vote")
+		logger.Error("Failed to send vote", "msgCode", code, "err", "could not encode unsigned vote")
 		return
 	}
 	signedVoteBytes, err := c.signer.BLSSign(unsignedVoteBytes)
 	if err != nil {
-		logger.Error("Failed to send vote", "msg", code, "err", "could not sign unsigned vote bytes")
+		logger.Error("Failed to send vote", "msgCode", code, "err", "could not sign unsigned vote bytes")
 		return
 	}
 	vote.BLSSignature = signedVoteBytes
 	payload, err := hs.Encode(vote)
 	if err != nil {
-		logger.Error("Failed to encode", "msg", code, "err", err)
+		logger.Error("Failed to encode", "msgCode", code, "err", err)
 		return
 	}
 
 	c.broadcast(code, payload)
 	prefix := fmt.Sprintf("send%s", code.String())
-	logger.Trace(prefix, "msg", code, "hash", vote)
+	logger.Trace(prefix, "msgCode", code, "hash", vote)
 }
 
 func (c *Core) checkMsgSource(src common.Address) error {

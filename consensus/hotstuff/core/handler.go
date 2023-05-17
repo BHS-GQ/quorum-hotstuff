@@ -135,7 +135,7 @@ func (c *Core) handleMsg(val common.Address, payload []byte) error {
 	// Only accept message if the src is consensus participant
 	index, src := c.valSet.GetByAddress(val)
 	if index < 0 || src == nil {
-		logger.Error("Invalid address in Message", "msg", msg)
+		logger.Error("Invalid address in Message", "msgCode", msg)
 		return hs.ErrInvalidSigner
 	}
 
@@ -201,7 +201,7 @@ func (c *Core) broadcast(code hs.MsgType, payload []byte) {
 	msg := hs.NewCleanMessage(c.currentView(), code, payload)
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
-		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
+		logger.Error("Failed to finalize Message", "msgCode", msg, "err", err)
 		return
 	}
 
@@ -210,17 +210,17 @@ func (c *Core) broadcast(code hs.MsgType, payload []byte) {
 		// Send a vote-type message to leader
 
 		if err = c.backend.Unicast(c.valSet, payload); err != nil {
-			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
+			logger.Error("Failed to unicast Message", "msgCode", msg, "err", err)
 		}
 
 	case hs.MsgTypePrepare, hs.MsgTypePreCommit, hs.MsgTypeCommit, hs.MsgTypeDecide:
 		// Leader broadcasts decision to replicas
 
 		if err = c.backend.Broadcast(c.valSet, payload); err != nil {
-			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
+			logger.Error("Failed to broadcast Message", "msgCode", msg, "err", err)
 		}
 	default:
-		logger.Error("invalid msg type", "msg", msg)
+		logger.Error("invalid msg type", "msgCode", msg)
 	}
 }
 

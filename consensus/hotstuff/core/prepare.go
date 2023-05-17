@@ -27,19 +27,19 @@ func (c *Core) sendPrepare() {
 	// fetch block with locked node or miner pending request
 	if lockedBlock := c.current.LockedBlock(); lockedBlock != nil {
 		if lockedBlock.NumberU64() != c.HeightU64() {
-			logger.Trace("Locked block height invalid", "msg", code, "expect", c.HeightU64(), "got", lockedBlock.NumberU64())
+			logger.Trace("Locked block height invalid", "msgCode", code, "expect", c.HeightU64(), "got", lockedBlock.NumberU64())
 			return
 		}
 		block = lockedBlock
-		logger.Trace("Reuse lock block", "msg", code, "hash", block.Hash(), "number", block.NumberU64())
+		logger.Trace("Reuse lock block", "msgCode", code, "hash", block.Hash(), "number", block.NumberU64())
 	} else {
 		request := c.current.PendingRequest()
 		if request == nil || request.Block == nil || request.Block.NumberU64() != c.HeightU64() {
-			logger.Trace("Pending request invalid", "msg", code)
+			logger.Trace("Pending request invalid", "msgCode", code)
 			return
 		} else {
 			block = c.current.PendingRequest().Block
-			logger.Trace("Use pending request", "msg", code, "hash", block.Hash(), "number", block.NumberU64())
+			logger.Trace("Use pending request", "msgCode", code, "hash", block.Hash(), "number", block.NumberU64())
 		}
 	}
 
@@ -48,7 +48,7 @@ func (c *Core) sendPrepare() {
 	if block.Time() > uint64(time.Now().Unix()) {
 		delay := time.Unix(int64(block.Time()), 0).Sub(time.Now())
 		time.Sleep(delay)
-		logger.Trace("delay to broadcast proposal", "msg", code, "time", delay.Milliseconds())
+		logger.Trace("delay to broadcast proposal", "msgCode", code, "time", delay.Milliseconds())
 	}
 
 	// assemble message as formula: MSG(view, node, prepareQC)
@@ -57,19 +57,19 @@ func (c *Core) sendPrepare() {
 	prepareSubject := hs.NewPackagedQC(node, highQC)
 	payload, err := hs.Encode(prepareSubject)
 	if err != nil {
-		logger.Trace("Failed to encode", "msg", code, "err", err)
+		logger.Trace("Failed to encode", "msgCode", code, "err", err)
 		return
 	}
 
 	// store the node before `handlePrepare` to prevent the replica from receiving the message and voting earlier
 	// than the leader, and finally causing `handlePrepareVote` to fail.
 	if err := c.current.SetCmdNode(node); err != nil {
-		logger.Trace("Failed to set node", "msg", code, "err", err)
+		logger.Trace("Failed to set node", "msgCode", code, "err", err)
 		return
 	}
 
 	c.broadcast(code, payload)
-	logger.Trace("sendPrepare", "msg", code, "node", node.Hash(), "block", block.Hash())
+	logger.Trace("sendPrepare", "msgCode", code, "node", node.Hash(), "block", block.Hash())
 }
 
 // handlePrepare implement description as follow:
@@ -89,52 +89,52 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 
 	// check message
 	if err := data.Decode(&subject); err != nil {
-		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to decode", "msgCode", code, "src", src, "err", err)
 		return hs.ErrFailedDecodePrepare
 	}
 	if err := c.checkView(data.View); err != nil {
-		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check view", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkMsgSource(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check proposer", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 
 	// local node is nil before `handlePrepare`, only check fields here.
 	node := subject.CmdNode
 	if err := c.checkNode(node, false); err != nil {
-		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check node", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 
 	// ensure remote block is legal.
 	block := node.Block
 	if err := c.checkBlock(block); err != nil {
-		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check block", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 	if duration, err := c.backend.Verify(block); err != nil {
-		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
+		logger.Trace("Failed to verify unsealed proposal", "msgCode", code, "src", src, "err", err, "duration", duration)
 		return hs.ErrVerifyUnsealedProposal
 	}
 	if err := c.executeBlock(block); err != nil {
-		logger.Trace("Failed to execute block", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to execute block", "msgCode", code, "src", src, "err", err)
 		return err
 	}
 
 	// safety and liveness rules judgement.
 	highQC := subject.QC
 	if err := c.verifyQC(data, highQC); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err, "highQC", highQC)
+		logger.Trace("Failed to verify highQC", "msgCode", code, "src", src, "err", err, "highQC", highQC)
 		return err
 	}
 	if err := c.safeNode(node, highQC); err != nil {
-		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to check safeNode", "msgCode", code, "src", src, "err", err)
 		return hs.ErrSafeNode
 	}
 
-	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.Hash())
+	logger.Trace("handlePrepare", "msgCode", code, "src", src, "node", node.Hash(), "block", block.Hash())
 
 	// accept msg info, DONT persist node before accept `prepareQC`
 	if c.IsProposer() && c.currentState() == hs.StateHighQC {
@@ -143,11 +143,11 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	if !c.IsProposer() && c.currentState() < hs.StateHighQC {
 		// Update round state to new CmdNode
 		if err := c.current.SetCmdNode(node); err != nil {
-			logger.Trace("Failed to set node", "msg", code, "err", err)
+			logger.Trace("Failed to set node", "msgCode", code, "err", err)
 			return err
 		}
 		c.setCurrentState(hs.StateHighQC)
-		logger.Trace("acceptHighQC", "msg", code, "highQC", highQC.CmdNode, "node", node.Hash())
+		logger.Trace("acceptHighQC", "msgCode", code, "highQC", highQC.CmdNode, "node", node.Hash())
 
 		// Node for vote-building is fetched from round state
 		c.sendVote(hs.MsgTypePrepareVote)

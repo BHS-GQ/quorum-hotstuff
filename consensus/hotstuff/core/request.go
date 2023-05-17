@@ -80,7 +80,7 @@ func (c *Core) processPendingRequests() {
 		m, prio := c.pendingRequests.Pop()
 		r, ok := m.(*hs.Request)
 		if !ok {
-			c.logger.Warn("Malformed request, skip", "msg", m)
+			c.logger.Warn("Malformed request, skip", "msgCode", m)
 			continue
 		}
 		// Push back if it's a future message
