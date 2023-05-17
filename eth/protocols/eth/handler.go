@@ -22,7 +22,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/metrics"
@@ -93,11 +92,6 @@ type Backend interface {
 	// the remote peer. Only packets not consumed by the protocol handler will
 	// be forwarded to the backend.
 	Handle(peer *Peer, packet Packet) error
-
-	// HotStuff - Hacky expose
-	// Engine return consensus engine
-	Engine() consensus.Engine
-	// /HotSTuff
 }
 
 // TxPool defines the methods needed by the protocol handler to serve transactions.

@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -53,13 +52,6 @@ func (h *qlightClientHandler) PeerInfo(id enode.ID) interface{} {
 func (h *qlightClientHandler) AcceptTxs() bool {
 	return atomic.LoadUint32(&h.acceptTxs) == 1
 }
-
-// HotStuff
-func (h *qlightClientHandler) Engine() consensus.Engine {
-	return h.engine
-}
-
-// /HotStuff
 
 // newHandler returns a handler for all Ethereum chain management protocol.
 func newQLightClientHandler(config *handlerConfig) (*handler, error) {
