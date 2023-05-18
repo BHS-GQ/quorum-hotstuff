@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/istanbul"
 	qbfttypes "github.com/ethereum/go-ethereum/consensus/istanbul/qbft/types"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -135,6 +136,14 @@ func (sb *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
 func (sb *Backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	sb.broadcaster = broadcaster
+}
+
+func (s *Backend) GetBroadcaster() consensus.Broadcaster {
+	return s.broadcaster
+}
+
+func (s *Backend) SubscribeBlock(ch chan<- consensus.ExecutedBlock) event.Subscription {
+	return nil
 }
 
 func (sb *Backend) NewChainHead(header *types.Header) error {
