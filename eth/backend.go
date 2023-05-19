@@ -395,6 +395,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
 	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData, eth.blockchain.Config().IsQuorum))
 
+	// HotStuff - Set miner recommit time value as hotstuff block period duration
+	if eth.handler.getConsensusAlgorithm() == "hotstuff" {
+		defaultRecommitTime := time.Second * time.Duration(chainConfig.HotStuff.BlockPeriodSeconds)
+		eth.miner.SetRecommitInterval(defaultRecommitTime)
+	}
+	// /HotStuff
+
 	// Quorum
 	hexNodeId := fmt.Sprintf("%x", crypto.FromECDSAPub(&stack.GetNodeKey().PublicKey)[1:])
 	node, err := enode.ParseV4(hexNodeId)
