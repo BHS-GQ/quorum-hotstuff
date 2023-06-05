@@ -75,7 +75,9 @@ func (c *Core) checkMsgDest() error {
 	return nil
 }
 
-// verifyQC check and validate qc.
+// verifyQC
+//  - Check QC fields before checking contained aggsig against contents
+//  - Aggsig checking is done by signer.AuthQC()
 func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	if qc == nil || qc.View == nil {
 		return fmt.Errorf("qc or qc.View is nil")
@@ -140,7 +142,7 @@ func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	}
 
 	// find the correct validator set and verify seal & committed seals
-	return c.signer.VerifyQC(qc)
+	return c.signer.AuthQC(qc)
 }
 
 func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
@@ -161,22 +163,13 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 		qc.ProposedBlock = lastBlock.Hash()
 	}
 
-	// Get AggSig of PrepareQC from lastBlock header
-	// extra, err := types.ExtractHotstuffExtra(lastBlock.Header())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if extra.Seal == nil {
-	// 	return nil, hs.ErrInvalidNode
-	// }
-
-	// [TODO] extra.BLSSignature with predetermined msg for genesis
 	qc.BLSSignature = []byte{}
 
 	return qc, nil
 }
 
-// sendVote repo send kinds of vote to leader, use `current.node` after repo `prepared`.
+// sendVote
+//  - Entrypoint for sending any kind of vote message to leader
 func (c *Core) sendVote(code hs.MsgType) {
 	logger := c.newLogger()
 
@@ -215,7 +208,8 @@ func (c *Core) checkMsgSource(src common.Address) error {
 	return nil
 }
 
-// checkNode repo compare remote node with local node
+// checkNode
+//  - Compare received block/node with local block/node
 func (c *Core) checkNode(node *hs.ProposedBlock, compare bool) error {
 	if node == nil || node.Parent == hs.EmptyHash ||
 		node.Block == nil || node.Block.Header() == nil {
@@ -239,8 +233,9 @@ func (c *Core) checkNode(node *hs.ProposedBlock, compare bool) error {
 	return nil
 }
 
-// checkBlock check the extend relationship between remote block and latest chained block.
-// ensure that the remote block equals to locked block if it exist.
+// checkBlock
+//  - Ensure that received block/node is consistent with latest chained block
+//  - If locked block exists, make sure it is equal to received block/node
 func (c *Core) checkBlock(block *types.Block) error {
 	lastChainedBlock := c.current.LastChainedBlock()
 	if lastChainedBlock.NumberU64()+1 != block.NumberU64() {
@@ -262,21 +257,23 @@ func (c *Core) checkBlock(block *types.Block) error {
 	return nil
 }
 
-// checkVote vote should equal to current round state
+// checkVote
+//  - Check if vote values and bytes are as expected
+//  - Byte equality is a prerequisite for aggregating BLS signatures
+//  - BLS signatures per vote are checked in tbls.Recover() (see signer/signer.go)
 func (c *Core) checkVote(vote *hs.Vote, code hs.MsgType) error {
-	// [TODO] Can we check if partial signature is valid?
-	// YES! With bls.Verify()
-
 	if vote == nil {
 		return fmt.Errorf("current vote is nil")
 	}
 
+	// equal contents
 	expectedVote := c.current.UnsignedVote(code)
 	unsignedVote := vote.Unsigned()
 	if !reflect.DeepEqual(expectedVote, unsignedVote) {
 		return fmt.Errorf("expect %s, got %s", expectedVote, unsignedVote)
 	}
 
+	// equal bytes
 	voteBytes, err := hs.Encode(vote.Unsigned())
 	if err != nil {
 		return fmt.Errorf("could not encode vote")
@@ -285,8 +282,6 @@ func (c *Core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 	if err != nil {
 		return fmt.Errorf("could not encode expected vote")
 	}
-
-	// Check encoded version equality
 	if !bytes.Equal(expectedVoteBytes, voteBytes) {
 		return fmt.Errorf("vote does not match expected vote")
 	}

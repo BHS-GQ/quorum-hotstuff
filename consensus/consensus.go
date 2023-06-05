@@ -188,5 +188,3 @@ type ExecutedBlock struct {
 	Receipts types.Receipts
 	Logs     []*types.Log
 }
-
-// /Hotstuff

@@ -707,7 +707,6 @@ func (h *handler) FindPeers(targets map[common.Address]bool) map[common.Address]
 	return m
 }
 
-// HotStuff
 func (h *handler) FindPeer(target common.Address) consensus.Peer {
 	// Locks not implemented in Zion
 	h.peers.lock.RLock()
@@ -723,7 +722,6 @@ func (h *handler) FindPeer(target common.Address) consensus.Peer {
 	return nil
 }
 
-// /HotStuff
 
 // makeQuorumConsensusProtocol is similar to eth/handler.go -> makeProtocol. Called from eth/handler.go -> Protocols.
 // returns the supported subprotocol to the p2p server.

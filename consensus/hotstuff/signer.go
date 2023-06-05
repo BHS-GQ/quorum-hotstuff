@@ -8,7 +8,7 @@ import (
 type Signer interface {
 	Address() common.Address
 
-	// BLS
+	/* BLS Related */
 
 	// BLSSign signs data with partial private key of validator
 	BLSSign(data []byte) ([]byte, error)
@@ -22,14 +22,14 @@ type Signer interface {
 	// Intended for HotStuff replicas
 	BLSVerifyAggSig(data []byte, aggSig []byte) error
 
-	// VerifyQC verifies a QC code, view, and hash given the aggsig
+	// AuthQC verifies a QC code, view, and hash given the aggsig
 	// Intended for HotStuff replicas
-	VerifyQC(qc *QuorumCert) error
+	AuthQC(qc *QuorumCert) error
 
 	// VerifyHeader verify proposer signature and committed seals
 	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) error
 
-	// Not BLS
+	/* Others */
 
 	// Sign signs data for ECDSA authetication
 	Sign(hash common.Hash) ([]byte, error)

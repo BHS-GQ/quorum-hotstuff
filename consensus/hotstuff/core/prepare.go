@@ -9,7 +9,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// sendPrepare leader send message of prepare(view, node, highQC)
+// sendPrepare
+//  - Leader builds prepare message. Picks proposal from locked block or
+//	  pending request from miner
+//  - We make sure to delay until intended block time before sending
 func (c *Core) sendPrepare() {
 
 	// filter incorrect proposer and state
@@ -24,7 +27,7 @@ func (c *Core) sendPrepare() {
 		logger = c.newLogger()
 	)
 
-	// fetch block with locked node or miner pending request
+	// get locked block or miner pending request
 	if lockedBlock := c.current.LockedBlock(); lockedBlock != nil {
 		if lockedBlock.NumberU64() != c.HeightU64() {
 			logger.Trace("Locked block height invalid", "msgCode", code, "expect", c.HeightU64(), "got", lockedBlock.NumberU64())
@@ -51,7 +54,7 @@ func (c *Core) sendPrepare() {
 		logger.Trace("delay to broadcast proposal", "msgCode", code, "time", delay.Milliseconds())
 	}
 
-	// assemble message as formula: MSG(view, node, prepareQC)
+	// assemble message
 	parent := highQC.ProposedBlock
 	node := hs.NewProposedBlock(parent, block)
 	prepareSubject := hs.NewPackagedQC(node, highQC)
@@ -72,13 +75,9 @@ func (c *Core) sendPrepare() {
 	logger.Trace("sendPrepare", "msgCode", code, "node", node.Hash(), "block", block.Hash())
 }
 
-// handlePrepare implement description as follow:
-// ```
-//  repo wait for message m : matchingMsg(m, prepare, curView) from leader(curView)
-//	if m.node extends from m.justify.node ∧
-//	safeNode(m.node, m.justify) then
-//	send voteMsg(prepare, m.node, ⊥) to leader(curView)
-// ```
+// handlePrepare
+//  - Replica waits for prepare message and verifies proposed block
+//  - Verified: accept proposal
 func (c *Core) handlePrepare(data *hs.Message) error {
 	var (
 		logger  = c.newLogger()
@@ -156,8 +155,9 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	return nil
 }
 
-// proposer do not need execute block again after miner.worker commitNewWork.
 func (c *Core) executeBlock(block *types.Block) error {
+	// proposer doesn't execute block again after miner.worker commitNewWork
+
 	if c.IsProposer() {
 		c.current.executed = &consensus.ExecutedBlock{Block: block}
 		return nil
@@ -172,7 +172,7 @@ func (c *Core) executeBlock(block *types.Block) error {
 }
 
 func (c *Core) safeNode(node *hs.ProposedBlock, highQC *hs.QuorumCert) error {
-	// Data checks
+	// check fields
 	if highQC == nil || highQC.View == nil {
 		return hs.ErrInvalidQC
 	}
@@ -186,12 +186,12 @@ func (c *Core) safeNode(node *hs.ProposedBlock, highQC *hs.QuorumCert) error {
 		return nil
 	}
 
-	// Safety
+	// safety
 	if lockQC.ProposedBlock == node.Parent {
 		return nil
 	}
 
-	// Liveliness
+	// liveliness
 	if highQC.View.Cmp(lockQC.View) > 0 {
 		return nil
 	}

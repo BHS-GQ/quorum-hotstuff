@@ -74,10 +74,8 @@ type Broadcaster interface {
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
 
-	// HotStuff - For unicast
-	// FindPeer find peer by address
+	// FindPeer find peer by address; used for unicasting
 	FindPeer(target common.Address) Peer
-	// /HotStuff
 }
 
 // Peer defines the interface to communicate with peer

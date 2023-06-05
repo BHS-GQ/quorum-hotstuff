@@ -223,6 +223,7 @@ func (s *Backend) SealBlock(block *types.Block, commitQC *hs.QuorumCert) (*types
 		return nil, hs.ErrInvalidProposal
 	}
 
+	// seal block with QC bytes
 	encodedQC, err := hs.Encode(commitQC)
 	if err != nil {
 		return nil, err

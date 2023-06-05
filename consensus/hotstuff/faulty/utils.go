@@ -75,7 +75,9 @@ func (c *Core) checkMsgDest() error {
 	return nil
 }
 
-// verifyQC check and validate qc.
+// verifyQC
+//  - Check QC fields before checking contained aggsig against contents
+//  - Aggsig checking is done by signer.AuthQC()
 func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	if qc == nil || qc.View == nil {
 		return fmt.Errorf("qc or qc.View is nil")
@@ -140,7 +142,7 @@ func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	}
 
 	// find the correct validator set and verify seal & committed seals
-	return c.signer.VerifyQC(qc)
+	return c.signer.AuthQC(qc)
 }
 
 func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
@@ -161,16 +163,6 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 		qc.ProposedBlock = lastBlock.Hash()
 	}
 
-	// Get AggSig of PrepareQC from lastBlock header
-	// extra, err := types.ExtractHotstuffExtra(lastBlock.Header())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if extra.Seal == nil {
-	// 	return nil, hs.ErrInvalidNode
-	// }
-
-	// [TODO] extra.BLSSignature with predetermined msg for genesis
 	qc.BLSSignature = []byte{}
 
 	return qc, nil

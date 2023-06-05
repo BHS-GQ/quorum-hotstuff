@@ -607,8 +607,6 @@ func (c *Config) warnOnce(w *bool, format string, args ...interface{}) {
 	*w = true
 }
 
-// HotStuff
-
 type PriShare struct {
 	Index int    `json:"Index"`
 	Pri   []byte `json:"Pri"`

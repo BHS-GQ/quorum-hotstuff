@@ -11,7 +11,7 @@ func (s *Backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block
 	header := block.Header()
 	number := header.Number.Uint64()
 
-	// Bail out if we're unauthorized to sign a block
+	// bail out if we're unauthorized to sign a block
 	snap := s.snap()
 	if _, v := snap.GetByAddress(s.Address()); v == nil {
 		return hs.ErrUnauthorized
@@ -22,7 +22,7 @@ func (s *Backend) MockSeal(chain consensus.ChainHeaderReader, block *types.Block
 		return consensus.ErrUnknownAncestor
 	}
 
-	// Sign the HotstuffExtra.Seal portion with ECDSA
+	// sign the HotstuffExtra.Seal portion with ECDSA
 	if err = s.signer.SignerSeal(header); err != nil {
 		return err
 	}

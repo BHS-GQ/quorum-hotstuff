@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	// HotstuffDigest represents a hash of "Hotstuff practical byzantine fault tolerance"
-	// to identify whether the block is from Hotstuff consensus engine
+	// HotstuffDigest identifies whether
+	// the block was created by the Hotstuff consensus engine
 	HotstuffDigest = common.HexToHash("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
 
 	HotstuffExtraVanity = 32 // Fixed number of extra-data bytes reserved for validator vanity

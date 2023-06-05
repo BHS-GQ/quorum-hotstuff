@@ -45,14 +45,10 @@ func (s *Backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	return data, hs.RLPHash(data), nil
 }
 
-// HotStuff
-// For Quorum consensus framework
-// Protocol implements consensus.Engine.Protocol
+// for quorum consensus framework
 func (sb *Backend) Protocol() consensus.Protocol {
 	return consensus.HotstuffProtocol
 }
-
-// /HotStuff
 
 // HandleMsg implements consensus.Handler.HandleMsg
 func (s *Backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {

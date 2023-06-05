@@ -4,13 +4,11 @@ import (
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-// handlePreCommitVote implement description as follow:
-// ```
-//  leader wait for (n n f) votes: V ← {v | matchingMsg(v, pre-commit, curView)}
-//	precommitQC ← QC(V )
-//	broadcast Msg(commit, ⊥, precommitQC )
-// ```
-// [NOTE] We follow HotStuff specifications strictly, so whole ProposedBlock is NOT sent
+// handlePreCommitVote
+// 	- Leader waits for pre-commit votes
+// 	- Quorum: build pre-commitQC and send commit message
+// 	- We follow HotStuff specifications strictly, so whole ProposedBlock is NOT sent
+//  - BHS Spec: implements leader portion of COMMIT phase (lines 19-22)
 func (c *Core) handlePreCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -74,12 +72,10 @@ func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 	logger.Trace("sendCommit", "msgCode", code, "node", lockQC.ProposedBlock)
 }
 
-// handleCommit implement description as follow:
-// ```
-// repo wait for message m : matchingQC(m.justify, pre-commit, curView) from leader(curView)
-//	lockedQC ← m.justify
-//	send voteMsg(commit, m.justify.node, ⊥) to leader(curView)
-// ```
+// handleCommit
+// 	- Replica waits for commit message and verifies pre-commitQC
+// 	- Verified: send commit vote
+//  - BHS Spec: implements replica portion of COMMIT phase (lines 23-26)
 func (c *Core) handleCommit(data *hs.Message) error {
 	var (
 		logger = c.newLogger()

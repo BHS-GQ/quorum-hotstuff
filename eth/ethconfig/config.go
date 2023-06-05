@@ -232,7 +232,6 @@ type Config struct {
 	QuorumLightServer bool               `toml:",omitempty"`
 	QuorumLightClient *QuorumLightClient `toml:",omitempty"`
 
-	// HotStuff
 	HotStuff hotstuff.Config
 }
 
@@ -243,7 +242,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 		chainConfig.Clique.AllowedFutureBlockTime = config.Miner.AllowedFutureBlockTime //Quorum
 		return clique.New(chainConfig.Clique, db)
 	}
-	// HotStuff
+
 	if chainConfig.HotStuff != nil {
 		// Set config
 		config.HotStuff.BlockPeriod = chainConfig.HotStuff.BlockPeriodSeconds
@@ -270,7 +269,6 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 
 		return hotstuffBackend.New(&config.HotStuff, nodeKey, db, valset, blsInfo)
 	}
-	// /HotStuff
 
 	if len(chainConfig.Transitions) > 0 {
 		config.Istanbul.Transitions = chainConfig.Transitions

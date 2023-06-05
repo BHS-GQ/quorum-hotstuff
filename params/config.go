@@ -375,9 +375,7 @@ type ChainConfig struct {
 
 	// End of Quorum specific configs
 
-	// HotStuff
 	HotStuff *HotStuffConfig `json:"hotstuff"`
-	// /HotStuff
 }
 
 // EthashConfig is the consensus engine configs for proof-of-work based sealing.
@@ -388,7 +386,6 @@ func (c *EthashConfig) String() string {
 	return "ethash"
 }
 
-// HotStuff
 type HotStuffConfig struct {
 	RequestTimeoutMilliseconds uint64           `json:"requesttimeoutmilliseconds"` // The timeout for each HotStuff round in milliseconds.
 	BlockPeriodSeconds         uint64           `json:"blockperiodseconds"`         // Default minimum difference between two consecutive block's timestamps in second for basic hotstuff and mill-seconds for event-driven
@@ -401,8 +398,6 @@ type HotStuffConfig struct {
 func (c *HotStuffConfig) String() string {
 	return "hotstuff"
 }
-
-// /HotStuff
 
 // CliqueConfig is the consensus engine configs for proof-of-authority based sealing.
 type CliqueConfig struct {

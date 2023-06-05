@@ -117,7 +117,7 @@ func (s *Backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 	number := header.Number.Uint64()
 
-	// Bail out if we're unauthorized to sign a block
+	// bail out if we're unauthorized to sign a block
 	snap := s.snap()
 	if _, v := snap.GetByAddress(s.Address()); v == nil {
 		return hs.ErrUnauthorized
@@ -128,7 +128,7 @@ func (s *Backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return consensus.ErrUnknownAncestor
 	}
 
-	// Sign the HotstuffExtra.Seal portion with ECDSA
+	// sign the HotstuffExtra.Seal portion with ECDSA
 	if err = s.signer.SignerSeal(header); err != nil {
 		return err
 	}

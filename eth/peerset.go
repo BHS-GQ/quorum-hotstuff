@@ -182,7 +182,6 @@ func (ps *peerSet) peer(id string) *ethPeer {
 	return ps.peers[id]
 }
 
-// HotStuff
 // Peers returns all registered peers
 func (ps *peerSet) allPeers() map[string]*ethPeer {
 	ps.lock.RLock()
@@ -194,8 +193,6 @@ func (ps *peerSet) allPeers() map[string]*ethPeer {
 	}
 	return set
 }
-
-// /HotStuff
 
 // peersWithoutBlock retrieves a list of peers that do not have a given block in
 // their set of known hashes so it might be propagated to them.

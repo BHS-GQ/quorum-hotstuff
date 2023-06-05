@@ -65,7 +65,12 @@ func (s *HotstuffSigner) Address() common.Address {
 	return s.address
 }
 
-// BLS section
+/*
+	BLS RELATED
+*/
+
+// BLSSign
+//  - Sign bytes using private BLS key
 func (s *HotstuffSigner) BLSSign(data []byte) ([]byte, error) {
 	signed_data, err := tbls.Sign(s.suite, s.blsPrivKey, data)
 	if err != nil {
@@ -74,6 +79,8 @@ func (s *HotstuffSigner) BLSSign(data []byte) ([]byte, error) {
 	return signed_data, nil
 }
 
+// BLSRecoverAggSig
+//  - Create aggregated BLS signature from vote partial signatures and intended data
 func (s *HotstuffSigner) BLSRecoverAggSig(data []byte, sigShares [][]byte) ([]byte, error) {
 	aggSig, err := tbls.Recover(s.suite, s.blsPubPoly, data, sigShares, s.t, s.n)
 	if err != nil {
@@ -82,6 +89,8 @@ func (s *HotstuffSigner) BLSRecoverAggSig(data []byte, sigShares [][]byte) ([]by
 	return aggSig, nil
 }
 
+// BLSVerifyAggSig
+//  - Verify aggregated BLS signature on intended data
 func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 	err := bls.Verify(s.suite, s.blsPubPoly.Commit(), data, aggSig)
 	if err != nil {
@@ -90,7 +99,10 @@ func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 	return nil
 }
 
-func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
+// AuthQC
+//  - Authenticates QC signature against contents using BLSVerifyAggSig()
+//  - Must be called after QC fields have been verified
+func (s *HotstuffSigner) AuthQC(qc *hs.QuorumCert) error {
 	// skip genesis block
 	if qc.View.Height.Uint64() == 0 {
 		return nil
@@ -109,8 +121,12 @@ func (s *HotstuffSigner) VerifyQC(qc *hs.QuorumCert) error {
 	return nil
 }
 
+// VerifyHeader
+//  - Verifies block header fields and seal
+//  - Note that blocks are sealed by a QC, which needs a call to
+//    AuthQC() for verification
 func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorSet, seal bool) error {
-	// Verifying the genesis block is not supported
+	// verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
 		return nil
@@ -125,7 +141,7 @@ func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorS
 		return hs.ErrInvalidSigner
 	}
 
-	// Signer should be in the validator set of previous block's extraData.
+	// signer should be in the validator set of previous block's extraData.
 	if _, v := valSet.GetByAddress(signer); v == nil {
 		return hs.ErrUnauthorized
 	}
@@ -144,7 +160,7 @@ func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorS
 		}
 
 		// Check CommitQC delivered via header
-		if err := s.VerifyQC(commitQC); err != nil {
+		if err := s.AuthQC(commitQC); err != nil {
 			s.logger.Trace("Failed to verify QC in header", "err", err)
 			return err
 		}
@@ -153,7 +169,9 @@ func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorS
 	return nil
 }
 
-// VVV Not BLS related section VVV
+/*
+	OTHERS
+*/
 
 func (s *HotstuffSigner) Sign(hash common.Hash) ([]byte, error) {
 	if hash == hs.EmptyHash {
@@ -262,7 +280,6 @@ func (s *HotstuffSigner) BuildPrepareExtra(header *types.Header, valSet hs.Valid
 	}
 	buf.Write(header.Extra[:types.HotstuffExtraVanity])
 
-	// [TODO] Consider explicitly adding other fields
 	ist := &types.HotstuffExtra{
 		Validators: vals,
 		Seal:       []byte{},

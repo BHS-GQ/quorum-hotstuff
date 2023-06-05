@@ -9,12 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// handleCommitVote implement description as follow:
-// ```
-// leader wait for (n n f) votes: V ← {v | matchingMsg(v, commit, curView)}
-//	commitQC ← QC(V )
-//	broadcast Msg(decide, ⊥, commitQC )
-// ```
+// handleCommitVote
+// 	- Leader waits for pre-commit votes
+// 	- Quorum: build pre-commitQC and send `Diploma`
+//		- `Diploma` contains commitQC and block hash
+//  - BHS Spec: implements leader portion of DECIDE phase (lines 27-30)
 func (c *Core) handleCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -98,7 +97,10 @@ func (c *Core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	logger.Trace("sendDecide", "msgCode", code, "node", commitQC.ProposedBlock)
 }
 
-// handleDecide repo receive MsgDecide and try to commit the final block.
+// handleDecide
+// 	- Replica waits for decide message and verifies commitQC and block hash
+// 	- Verified: send block to miner for committing to blockchain
+//  - BHS Spec: implements replica portion of DECIDE phase (lines 31-34)
 func (c *Core) handleDecide(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -129,7 +131,7 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	}
 
 	// ensure the block hash is the correct one
-	// [NOTE] Header comparison does not include seal
+	// note that header comparison does not include seal
 	blockHash := msg.BlockHash
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {

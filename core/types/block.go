@@ -108,13 +108,11 @@ func (h *Header) Hash() common.Hash {
 		}
 
 	case HotstuffDigest:
-		// HotStuff
 		// If the mix digest is equivalent to the predefined HotStuff digest, use HotStuff
 		// specific hash calculation.
 		if hotstuffHeader := HotstuffFilteredHeader(h, false); hotstuffHeader != nil {
 			return rlpHash(hotstuffHeader)
 		}
-		// /HotStuff
 	}
 
 	return rlpHash(h)

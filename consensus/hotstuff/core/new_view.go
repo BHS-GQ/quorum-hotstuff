@@ -2,9 +2,9 @@ package core
 
 import hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
-// sendNewView, repo send message of new-view, formula as follow:
-// 	MSG(new-view, _, prepareQC)
-// the field of view will be packaged in message before broadcast.
+// sendNewView
+//	- Replicas get latest prepareQC and send it in new-view message
+//  - BHS Spec: implements nextView interrupt (line 36)
 func (c *Core) sendNewView() {
 	logger := c.newLogger()
 	code := hs.MsgTypeNewView
@@ -20,8 +20,11 @@ func (c *Core) sendNewView() {
 	logger.Trace("sendNewView", "msgCode", code)
 }
 
-// handleNewView, leader gather new-view messages and pick the max `prepareQC` to be `highQC` by view sequence.
-// `hs.stateHighQC` denote that node is ready to pack block to send the `prepare` message.
+// handleNewView
+// 	- Leader waits for new-view messages
+//  - Quorum: pick `highQC`, the max `prepareQC` by view sequence
+// 	- `hs.stateHighQC` denotes that this node is ready to send block and prepare message
+//  - BHS Spec: implements leader portion of PREPARE phase (lines 2-6)
 func (c *Core) handleNewView(data *hs.Message) error {
 	var (
 		logger    = c.newLogger()
