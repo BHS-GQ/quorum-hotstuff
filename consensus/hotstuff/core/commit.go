@@ -10,7 +10,7 @@ import (
 //	precommitQC ← QC(V )
 //	broadcast Msg(commit, ⊥, precommitQC )
 // ```
-// [NOTE] We follow HotStuff specifications strictly, so whole CmdNode is NOT sent
+// [NOTE] We follow HotStuff specifications strictly, so whole ProposedBlock is NOT sent
 func (c *Core) handlePreCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -71,7 +71,7 @@ func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 		return
 	}
 	c.broadcast(code, payload)
-	logger.Trace("sendCommit", "msgCode", code, "node", lockQC.CmdNode)
+	logger.Trace("sendCommit", "msgCode", code, "node", lockQC.ProposedBlock)
 }
 
 // handleCommit implement description as follow:
@@ -108,7 +108,7 @@ func (c *Core) handleCommit(data *hs.Message) error {
 		return err
 	}
 
-	logger.Trace("handleCommit", "msgCode", code, "src", src, "lockQC", lockQC.CmdNode)
+	logger.Trace("handleCommit", "msgCode", code, "src", src, "lockQC", lockQC.ProposedBlock)
 
 	// accept lockQC
 	if c.IsProposer() && c.currentState() < hs.StateCommitted {
@@ -119,7 +119,7 @@ func (c *Core) handleCommit(data *hs.Message) error {
 			logger.Trace("Failed to accept lockQC", "msgCode", code, "err", err)
 			return err
 		}
-		logger.Trace("acceptLockQC", "msgCode", code, "lockQC", lockQC.CmdNode)
+		logger.Trace("acceptLockQC", "msgCode", code, "lockQC", lockQC.ProposedBlock)
 
 		c.sendVote(hs.MsgTypeCommitVote)
 	}

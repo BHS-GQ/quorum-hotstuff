@@ -151,7 +151,7 @@ func TestMockNewViewCase2(t *testing.T) {
 				log.Error("failed to decode prepareQC", "err", err)
 				return data, true
 			}
-			qc.CmdNode = common.HexToHash("0x123")
+			qc.ProposedBlock = common.HexToHash("0x123")
 			raw, err := rlp.EncodeToBytes(&qc)
 			if err != nil {
 				log.Error("encode prepareQC failed", "err", err)

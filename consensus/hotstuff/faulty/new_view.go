@@ -55,7 +55,7 @@ func (c *Core) handleNewView(data *hs.Message) error {
 		return hs.ErrAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.CmdNode)
+	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.ProposedBlock)
 
 	if size := c.current.NewViewSize(); size >= c.valSet.Q() && c.currentState() < hs.StateHighQC {
 		highQC, err := c.getHighQC()
@@ -66,7 +66,7 @@ func (c *Core) handleNewView(data *hs.Message) error {
 		c.current.SetHighQC(highQC)
 		c.setCurrentState(hs.StateHighQC)
 
-		logger.Trace("acceptHighQC", "msg", code, "prepareQC", prepareQC.CmdNode, "msgSize", size)
+		logger.Trace("acceptHighQC", "msg", code, "prepareQC", prepareQC.ProposedBlock, "msgSize", size)
 		c.sendPrepare()
 	}
 

@@ -87,8 +87,8 @@ func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	}
 
 	// qc fields checking
-	if qc.CmdNode == hs.EmptyHash || qc.Proposer == hs.EmptyAddress || qc.BLSSignature == nil {
-		return fmt.Errorf("qc.CmdNode, Proposer, Seal or BLSSig is nil")
+	if qc.ProposedBlock == hs.EmptyHash || qc.Proposer == hs.EmptyAddress || qc.BLSSignature == nil {
+		return fmt.Errorf("qc.ProposedBlock, Proposer, Seal or BLSSig is nil")
 	}
 
 	// matching code
@@ -115,15 +115,15 @@ func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 		if qc.Proposer != c.proposer() {
 			return fmt.Errorf("expect proposer %v, got %v", c.proposer(), qc.Proposer)
 		}
-		if node := c.current.CmdNode(); node == nil {
+		if node := c.current.ProposedBlock(); node == nil {
 			return fmt.Errorf("current node is nil")
-		} else if node.Hash() != qc.CmdNode {
-			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.CmdNode)
+		} else if node.Hash() != qc.ProposedBlock {
+			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.ProposedBlock)
 		}
 	}
 
 	// resturct msg payload and compare msg.hash with qc.hash
-	msg := hs.NewCleanMessage(qc.View, qc.Code, qc.CmdNode.Bytes())
+	msg := hs.NewCleanMessage(qc.View, qc.Code, qc.ProposedBlock.Bytes())
 	if _, err := msg.PayloadNoSig(); err != nil {
 		return fmt.Errorf("payload no sig")
 	}
@@ -155,10 +155,10 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 	// allow genesis node and proposer to be empty
 	if lastBlock.NumberU64() == 0 {
 		qc.Proposer = common.Address{}
-		qc.CmdNode = common.HexToHash("0x12345")
+		qc.ProposedBlock = common.HexToHash("0x12345")
 	} else {
 		qc.Proposer = lastBlock.Coinbase()
-		qc.CmdNode = lastBlock.Hash()
+		qc.ProposedBlock = lastBlock.Hash()
 	}
 
 	// Get AggSig of PrepareQC from lastBlock header
@@ -216,7 +216,7 @@ func (c *Core) checkMsgSource(src common.Address) error {
 }
 
 // checkNode repo compare remote node with local node
-func (c *Core) checkNode(node *hs.CmdNode, compare bool) error {
+func (c *Core) checkNode(node *hs.ProposedBlock, compare bool) error {
 	if node == nil || node.Parent == hs.EmptyHash ||
 		node.Block == nil || node.Block.Header() == nil {
 		return hs.ErrInvalidNode
@@ -226,7 +226,7 @@ func (c *Core) checkNode(node *hs.CmdNode, compare bool) error {
 		return nil
 	}
 
-	local := c.current.CmdNode()
+	local := c.current.ProposedBlock()
 	if local == nil {
 		return fmt.Errorf("current node is nil")
 	}
@@ -354,11 +354,11 @@ func (c *Core) messagesToQC(code hs.MsgType) (*hs.QuorumCert, error) {
 	}
 
 	qc := &hs.QuorumCert{
-		View:         view,
-		Code:         code,
-		CmdNode:      expectedVote.CmdNode,
-		Proposer:     proposer,
-		BLSSignature: []byte{},
+		View:          view,
+		Code:          code,
+		ProposedBlock: expectedVote.ProposedBlock,
+		Proposer:      proposer,
+		BLSSignature:  []byte{},
 	}
 
 	for _, vote := range votes {

@@ -231,7 +231,7 @@ func TestMockDecideCase4(t *testing.T) {
 					log.Error("failed to decode diploma.commitQC", "err", err)
 					return data, true
 				} else {
-					qc.CmdNode = common.HexToHash("0x123")
+					qc.ProposedBlock = common.HexToHash("0x123")
 				}
 				var newDiploma = struct {
 					CommitQC  *hs.QuorumCert

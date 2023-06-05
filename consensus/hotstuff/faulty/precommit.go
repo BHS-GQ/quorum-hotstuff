@@ -10,7 +10,7 @@ import (
 //	prepareQC ← QC(V )
 //	broadcast Msg(pre-commit, ⊥, prepareQC )
 // ```
-// [NOTE] We follow HotStuff specifications strictly, so whole CmdNode is NOT sent
+// [NOTE] We follow HotStuff specifications strictly, so whole ProposedBlock is NOT sent
 func (c *Core) handlePrepareVote(data *hs.Message) error {
 
 	var (
@@ -56,7 +56,7 @@ func (c *Core) handlePrepareVote(data *hs.Message) error {
 			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
 			return err
 		}
-		logger.Trace("acceptPrepareQC", "msg", code, "prepareQC", prepareQC.CmdNode)
+		logger.Trace("acceptPrepareQC", "msg", code, "prepareQC", prepareQC.ProposedBlock)
 
 		c.sendPreCommit(prepareQC)
 	}
@@ -94,7 +94,7 @@ func (c *Core) sendPreCommit(prepareQC *hs.QuorumCert) {
 		c.broadcast(code, payload)
 	}
 
-	logger.Trace("sendPreCommit", "msg", code, "node", prepareQC.CmdNode)
+	logger.Trace("sendPreCommit", "msg", code, "node", prepareQC.ProposedBlock)
 }
 
 // handlePreCommit implement description as follow:
@@ -131,7 +131,7 @@ func (c *Core) handlePreCommit(data *hs.Message) error {
 		return err
 	}
 
-	logger.Trace("handlePreCommit", "msg", code, "src", src, "prepareQC", prepareQC.CmdNode)
+	logger.Trace("handlePreCommit", "msg", code, "src", src, "prepareQC", prepareQC.ProposedBlock)
 
 	// accept msg info and state
 	if c.IsProposer() && c.currentState() == hs.StatePrepared {
@@ -142,7 +142,7 @@ func (c *Core) handlePreCommit(data *hs.Message) error {
 			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
 			return err
 		}
-		logger.Trace("acceptPrepareQC", "msg", code, "prepareQC", prepareQC.CmdNode)
+		logger.Trace("acceptPrepareQC", "msg", code, "prepareQC", prepareQC.ProposedBlock)
 		c.sendVote(hs.MsgTypePreCommitVote)
 	}
 

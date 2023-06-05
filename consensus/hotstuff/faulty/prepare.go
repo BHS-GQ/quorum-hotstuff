@@ -52,8 +52,8 @@ func (c *Core) sendPrepare() {
 	}
 
 	// assemble message as formula: MSG(view, node, prepareQC)
-	parent := highQC.CmdNode
-	node := hs.NewCmdNode(parent, block)
+	parent := highQC.ProposedBlock
+	node := hs.NewProposedBlock(parent, block)
 	prepareSubject := hs.NewPackagedQC(node, highQC)
 	payload, err := hs.Encode(prepareSubject)
 	if err != nil {
@@ -63,7 +63,7 @@ func (c *Core) sendPrepare() {
 
 	// store the node before `handlePrepare` to prevent the replica from receiving the message and voting earlier
 	// than the leader, and finally causing `handlePrepareVote` to fail.
-	if err := c.current.SetCmdNode(node); err != nil {
+	if err := c.current.SetProposedBlock(node); err != nil {
 		logger.Trace("Failed to set node", "msg", code, "err", err)
 		return
 	}
@@ -102,7 +102,7 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 	}
 
 	// local node is nil before `handlePrepare`, only check fields here.
-	node := subject.CmdNode
+	node := subject.ProposedBlock
 	if err := c.checkNode(node, false); err != nil {
 		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
 		return err
@@ -141,13 +141,13 @@ func (c *Core) handlePrepare(data *hs.Message) error {
 		c.sendVote(hs.MsgTypePrepareVote)
 	}
 	if !c.IsProposer() && c.currentState() < hs.StateHighQC {
-		// Update round state to new CmdNode
-		if err := c.current.SetCmdNode(node); err != nil {
+		// Update round state to new ProposedBlock
+		if err := c.current.SetProposedBlock(node); err != nil {
 			logger.Trace("Failed to set node", "msg", code, "err", err)
 			return err
 		}
 		c.setCurrentState(hs.StateHighQC)
-		logger.Trace("acceptHighQC", "msg", code, "highQC", highQC.CmdNode, "node", node.Hash())
+		logger.Trace("acceptHighQC", "msg", code, "highQC", highQC.ProposedBlock, "node", node.Hash())
 
 		// Node for vote-building is fetched from round state
 		c.sendVote(hs.MsgTypePrepareVote)
@@ -171,13 +171,13 @@ func (c *Core) executeBlock(block *types.Block) error {
 	return nil
 }
 
-func (c *Core) safeNode(node *hs.CmdNode, highQC *hs.QuorumCert) error {
+func (c *Core) safeNode(node *hs.ProposedBlock, highQC *hs.QuorumCert) error {
 	// Data checks
 	if highQC == nil || highQC.View == nil {
 		return hs.ErrInvalidQC
 	}
-	if highQC.CmdNode != node.Parent {
-		return fmt.Errorf("expect parent %v, got %v", highQC.CmdNode, node.Parent)
+	if highQC.ProposedBlock != node.Parent {
+		return fmt.Errorf("expect parent %v, got %v", highQC.ProposedBlock, node.Parent)
 	}
 
 	lockQC := c.current.LockQC()
@@ -187,7 +187,7 @@ func (c *Core) safeNode(node *hs.CmdNode, highQC *hs.QuorumCert) error {
 	}
 
 	// Safety
-	if lockQC.CmdNode == node.Parent {
+	if lockQC.ProposedBlock == node.Parent {
 		return nil
 	}
 

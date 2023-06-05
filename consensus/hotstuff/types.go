@@ -186,28 +186,28 @@ func (v *View) Sub(y *View) (int64, int64) {
 	return h, r
 }
 
-type CmdNode struct {
+type ProposedBlock struct {
 	hash common.Hash
 
-	Parent common.Hash  // Parent CmdNode hash
+	Parent common.Hash  // Parent ProposedBlock hash
 	Block  *types.Block // Command to agree on
 }
 
-func NewCmdNode(parent common.Hash, block *types.Block) *CmdNode {
-	CmdNode := &CmdNode{
+func NewProposedBlock(parent common.Hash, block *types.Block) *ProposedBlock {
+	ProposedBlock := &ProposedBlock{
 		Parent: parent,
 		Block:  block,
 	}
-	CmdNode.Hash()
-	return CmdNode
+	ProposedBlock.Hash()
+	return ProposedBlock
 }
 
-func (n *CmdNode) EncodeRLP(w io.Writer) error {
+func (n *ProposedBlock) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{n.Parent, n.Block})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (n *CmdNode) DecodeRLP(s *rlp.Stream) error {
+func (n *ProposedBlock) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		Parent common.Hash
 		Block  *types.Block
@@ -221,28 +221,28 @@ func (n *CmdNode) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (n *CmdNode) Hash() common.Hash {
+func (n *ProposedBlock) Hash() common.Hash {
 	if n.hash == EmptyHash {
 		n.hash = RLPHash([]common.Hash{n.Parent, n.Block.Hash()})
 	}
 	return n.hash
 }
 
-func (n *CmdNode) String() string {
-	return fmt.Sprintf("{CmdNode: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
+func (n *ProposedBlock) String() string {
+	return fmt.Sprintf("{ProposedBlock: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
 }
 
 type QuorumCert struct {
-	View         *View
-	Code         MsgType
-	CmdNode      common.Hash // CmdNode hash NOT Block hash
-	Proposer     common.Address
-	BLSSignature []byte
+	View          *View
+	Code          MsgType
+	ProposedBlock common.Hash // ProposedBlock hash NOT Block hash
+	Proposer      common.Address
+	BLSSignature  []byte
 }
 
 // Hash retrieve message hash but not proposal hash
 func (qc *QuorumCert) SealHash() common.Hash {
-	msg := NewCleanMessage(qc.View, qc.Code, qc.CmdNode.Bytes())
+	msg := NewCleanMessage(qc.View, qc.Code, qc.ProposedBlock.Bytes())
 	msg.PayloadNoSig() // check if encodable
 	return msg.hash
 }
@@ -250,24 +250,24 @@ func (qc *QuorumCert) SealHash() common.Hash {
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
 	code := qc.Code.Value()
-	return rlp.Encode(w, []interface{}{qc.View, code, qc.CmdNode, qc.Proposer, qc.BLSSignature})
+	return rlp.Encode(w, []interface{}{qc.View, code, qc.ProposedBlock, qc.Proposer, qc.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		View         *View
-		Code         MsgType
-		CmdNode      common.Hash
-		Proposer     common.Address
-		BLSSignature []byte
+		View          *View
+		Code          MsgType
+		ProposedBlock common.Hash
+		Proposer      common.Address
+		BLSSignature  []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	qc.View, qc.Code, qc.CmdNode, qc.Proposer, qc.BLSSignature = data.View, data.Code, data.CmdNode, data.Proposer, data.BLSSignature
+	qc.View, qc.Code, qc.ProposedBlock, qc.Proposer, qc.BLSSignature = data.View, data.Code, data.ProposedBlock, data.Proposer, data.BLSSignature
 	return nil
 }
 
@@ -294,7 +294,7 @@ func (qc *QuorumCert) RoundU64() uint64 {
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.CmdNode.String(), qc.Proposer.Hex())
+	return fmt.Sprintf("{QuorumCert Code: %v, View: %v, Hash: %v, Proposer: %v}", qc.Code.String(), qc.View, qc.ProposedBlock.String(), qc.Proposer.Hex())
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {
@@ -442,24 +442,24 @@ func (m *Message) String() string {
 }
 
 type Vote struct {
-	Code    MsgType
-	View    *View
-	CmdNode common.Hash // Hash of Proposal/Block
+	Code          MsgType
+	View          *View
+	ProposedBlock common.Hash // Hash of Proposal/Block
 
 	BLSSignature []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (b *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.Code, b.View, b.CmdNode, b.BLSSignature})
+	return rlp.Encode(w, []interface{}{b.Code, b.View, b.ProposedBlock, b.BLSSignature})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Code    MsgType
-		View    *View
-		CmdNode common.Hash
+		Code          MsgType
+		View          *View
+		ProposedBlock common.Hash
 
 		BLSSignature []byte
 	}
@@ -467,32 +467,32 @@ func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	b.Code, b.View, b.CmdNode, b.BLSSignature = data.Code, data.View, data.CmdNode, data.BLSSignature
+	b.Code, b.View, b.ProposedBlock, b.BLSSignature = data.Code, data.View, data.ProposedBlock, data.BLSSignature
 	return nil
 }
 
 func (b *Vote) String() string {
-	return fmt.Sprintf("{Code: %v, View: %v, CmdNode: %v}", b.Code.String(), b.View, b.CmdNode.String())
+	return fmt.Sprintf("{Code: %v, View: %v, ProposedBlock: %v}", b.Code.String(), b.View, b.ProposedBlock.String())
 }
 
 func (b *Vote) Unsigned() *Vote {
 	return &Vote{
-		Code:         b.Code,
-		View:         b.View,
-		CmdNode:      b.CmdNode,
-		BLSSignature: []byte{},
+		Code:          b.Code,
+		View:          b.View,
+		ProposedBlock: b.ProposedBlock,
+		BLSSignature:  []byte{},
 	}
 }
 
 type PackagedQC struct {
-	CmdNode *CmdNode
-	QC      *QuorumCert // QuorumCert only contains Proposal's hash
+	ProposedBlock *ProposedBlock
+	QC            *QuorumCert // QuorumCert only contains Proposal's hash
 }
 
-func NewPackagedQC(node *CmdNode, qc *QuorumCert) *PackagedQC {
+func NewPackagedQC(node *ProposedBlock, qc *QuorumCert) *PackagedQC {
 	return &PackagedQC{
-		CmdNode: node,
-		QC:      qc,
+		ProposedBlock: node,
+		QC:            qc,
 	}
 }
 

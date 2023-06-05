@@ -105,7 +105,7 @@ func (c *Core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	}
 	c.broadcast(code, payload)
 
-	logger.Trace("sendDecide", "msg", code, "node", commitQC.CmdNode)
+	logger.Trace("sendDecide", "msg", code, "node", commitQC.ProposedBlock)
 }
 
 // handleDecide repo receive MsgDecide and try to commit the final block.
@@ -161,18 +161,18 @@ func (c *Core) handleDecide(data *hs.Message) error {
 		return hs.ErrInvalidBlock
 	}
 
-	if curNode := c.current.CmdNode(); curNode == nil || curNode.Block == nil {
+	if curNode := c.current.ProposedBlock(); curNode == nil || curNode.Block == nil {
 		logger.Trace("Current node is nil")
 		return hs.ErrInvalidNode
-	} else if curNode.Hash() != commitQC.CmdNode {
-		logger.Trace("Failed to check commitQC", "expect node", curNode.Hash(), "got", commitQC.CmdNode)
+	} else if curNode.Hash() != commitQC.ProposedBlock {
+		logger.Trace("Failed to check commitQC", "expect node", curNode.Hash(), "got", commitQC.ProposedBlock)
 		return hs.ErrInvalidQC
 	} else if curNode.Block.Hash() != blockHash {
 		logger.Trace("Failed to check node", "expect node block hash", curNode.Block.Hash(), "got", blockHash)
 		return hs.ErrInvalidBlock
 	}
 
-	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.CmdNode)
+	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.ProposedBlock)
 
 	// accept commitQC and commit block to miner
 	if c.IsProposer() && c.currentState() == hs.StateCommitted {

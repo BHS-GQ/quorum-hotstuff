@@ -142,7 +142,7 @@ func (c *Core) updateRoundState(lastProposal *types.Block, newView *hs.View) err
 
 	prepareQC := c.current.PrepareQC()
 	if prepareQC != nil {
-		c.logger.Trace("EpochStartPrepareQC already exist!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", prepareQC.CmdNode, "qc.view", prepareQC.View, "qc.proposer", prepareQC.Proposer)
+		c.logger.Trace("EpochStartPrepareQC already exist!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", prepareQC.ProposedBlock, "qc.view", prepareQC.View, "qc.proposer", prepareQC.Proposer)
 		return nil
 	}
 
@@ -158,7 +158,7 @@ func (c *Core) updateRoundState(lastProposal *types.Block, newView *hs.View) err
 	c.current.lockQC = nil
 	c.current.committedQC = nil
 
-	c.logger.Trace("EpochStartPrepareQC settled!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", qc.CmdNode, "qc.view", qc.View, "qc.proposer", qc.Proposer)
+	c.logger.Trace("EpochStartPrepareQC settled!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", qc.ProposedBlock, "qc.view", qc.View, "qc.proposer", qc.Proposer)
 	return nil
 }
 
