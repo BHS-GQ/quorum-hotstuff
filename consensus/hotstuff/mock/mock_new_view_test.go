@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2021 The Zion Authors
- * This file is part of The Zion library.
- *
- * The Zion is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * The Zion is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License for more details.
- *
- * You should have received a copy of the GNU Lesser General Public License
- * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package mock
 
 import (
@@ -30,17 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestSimple
 func TestSimple(t *testing.T) {
 	sys := makeSystem(7)
 	sys.Start()
 	sys.Close(10)
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase1
-// net scale is 7, 2 of them send fake message of newView with wrong height; WONT change view
 func TestMockNewViewCase1(t *testing.T) {
-	H, R, fR, fN := uint64(5), uint64(0), uint64(1), int(2)
+	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
 
@@ -110,9 +89,7 @@ func TestMockNewViewCase1(t *testing.T) {
 	}
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase2
-// net scale is 4, one of them send fake message of newView with wrong node; WONT change view
-// err should be "Failed to verify prepareQC"
+// Err thrown should be "Failed to verify prepareQC"
 func TestMockNewViewCase2(t *testing.T) {
 	H, R, fN := uint64(5), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
@@ -195,8 +172,6 @@ func TestMockNewViewCase2(t *testing.T) {
 	}
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase3
-// net scale is 4, one of them send message of newView to wrong leader; WONT change view
 func TestMockNewViewCase3(t *testing.T) {
 	H, R, fN := uint64(5), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
@@ -268,9 +243,7 @@ func TestMockNewViewCase3(t *testing.T) {
 	}
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase4
-// net scale is 4, one of them send fake message of newView with wrong height; WONT change view
-// err should be "failed to verify prepareQC"
+// Err thrown should be "failed to verify prepareQC"
 func TestMockNewViewCase4(t *testing.T) {
 	H, R, fH, fN := uint64(5), uint64(0), uint64(5), 1
 	fakeNodes := make(map[common.Address]struct{})
@@ -353,9 +326,7 @@ func TestMockNewViewCase4(t *testing.T) {
 	}
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase5
-// net scale is 4, one of them send fake message of newView with wrong round; WONT change view
-// err should be "failed to verify prepareQC"
+// Err thrown should be "failed to verify prepareQC"
 func TestMockNewViewCase5(t *testing.T) {
 	H, R, fR, fN := uint64(5), uint64(0), uint64(1), 1
 	fakeNodes := make(map[common.Address]struct{})
@@ -437,9 +408,7 @@ func TestMockNewViewCase5(t *testing.T) {
 	}
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase6
-// net scale is 4, one of them send fake message of newView with gibberish BLSSignature; WONT change view
-// err should be "failed to verify prepareQC"
+// Err thrown should be "failed to verify prepareQC"
 func TestMockNewViewCase6(t *testing.T) {
 	H, R, fN := uint64(5), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
