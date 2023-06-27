@@ -18,7 +18,7 @@ func TestSimple(t *testing.T) {
 	sys.Close(10)
 }
 
-func TestMockNewViewCase1(t *testing.T) {
+func TestNewViewFaultyRoundOk(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -90,7 +90,7 @@ func TestMockNewViewCase1(t *testing.T) {
 }
 
 // Err thrown should be "Failed to verify prepareQC"
-func TestMockNewViewCase2(t *testing.T) {
+func TestNewViewFaultyQCBlockOk(t *testing.T) {
 	H, R, fN := uint64(5), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -172,7 +172,7 @@ func TestMockNewViewCase2(t *testing.T) {
 	}
 }
 
-func TestMockNewViewCase3(t *testing.T) {
+func TestNewViewToWrongLeader(t *testing.T) {
 	H, R, fN := uint64(5), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -244,7 +244,7 @@ func TestMockNewViewCase3(t *testing.T) {
 }
 
 // Err thrown should be "failed to verify prepareQC"
-func TestMockNewViewCase4(t *testing.T) {
+func TestNewViewFaultyQCHeightOk(t *testing.T) {
 	H, R, fH, fN := uint64(5), uint64(0), uint64(5), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -327,7 +327,7 @@ func TestMockNewViewCase4(t *testing.T) {
 }
 
 // Err thrown should be "failed to verify prepareQC"
-func TestMockNewViewCase5(t *testing.T) {
+func TestNewViewFaultyQCRoundOk(t *testing.T) {
 	H, R, fR, fN := uint64(5), uint64(0), uint64(1), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -409,7 +409,7 @@ func TestMockNewViewCase5(t *testing.T) {
 }
 
 // Err thrown should be "failed to verify prepareQC"
-func TestMockNewViewCase6(t *testing.T) {
+func TestNewViewFaultyQCSignOk(t *testing.T) {
 	H, R, fN := uint64(5), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)

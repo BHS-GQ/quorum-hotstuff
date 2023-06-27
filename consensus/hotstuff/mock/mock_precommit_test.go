@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func TestMockPreCommitCase1(t *testing.T) {
+func TestPreCommitFaultyHeightBad(t *testing.T) {
 	H, R, fH := uint64(4), uint64(0), uint64(5)
 
 	sys := makeSystem(4)
@@ -67,7 +67,7 @@ func TestMockPreCommitCase1(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitCase2(t *testing.T) {
+func TestPreCommitFaultyRoundBad(t *testing.T) {
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -121,7 +121,7 @@ func TestMockPreCommitCase2(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitCase3(t *testing.T) {
+func TestPreCommitFaultyQCHeightBad(t *testing.T) {
 	H, R, fH := uint64(4), uint64(0), uint64(3)
 
 	sys := makeSystem(4)
@@ -188,7 +188,7 @@ func TestMockPreCommitCase3(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitCase4(t *testing.T) {
+func TestPreCommitFaultyQCRoundBad(t *testing.T) {
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -255,7 +255,7 @@ func TestMockPreCommitCase4(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitCase5(t *testing.T) {
+func TestPreCommitFaultyQCBlockBad(t *testing.T) {
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -322,7 +322,7 @@ func TestMockPreCommitCase5(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitCase6(t *testing.T) {
+func TestPreCommitFaultyQCSigBad(t *testing.T) {
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -392,7 +392,7 @@ func TestMockPreCommitCase6(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitVoteCase1(t *testing.T) {
+func TestPreCommitVoteFaultyHeightOk(t *testing.T) {
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), int32(1)
 
 	var locked int32
@@ -467,7 +467,7 @@ func TestMockPreCommitVoteCase1(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitVoteCase2(t *testing.T) {
+func TestPreCommitVoteFaultyHeightBad(t *testing.T) {
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), int32(2)
 
 	var locked int32
@@ -542,7 +542,7 @@ func TestMockPreCommitVoteCase2(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitVoteCase3(t *testing.T) {
+func TestPreCommitVoteFaultyRoundOk(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int32(1)
 
 	var locked int32
@@ -617,7 +617,7 @@ func TestMockPreCommitVoteCase3(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitVoteCase4(t *testing.T) {
+func TestPreCommitVoteFaultyRoundBad(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int32(2)
 
 	var locked int32
@@ -692,7 +692,7 @@ func TestMockPreCommitVoteCase4(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitVoteCase5(t *testing.T) {
+func TestPreCommitVoteFaultyPayloadOk(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), int32(1)
 
 	var locked int32
@@ -755,7 +755,7 @@ func TestMockPreCommitVoteCase5(t *testing.T) {
 	}
 }
 
-func TestMockPreCommitVoteCase6(t *testing.T) {
+func TestPreCommitVoteFaultyPayloadBad(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), int32(2)
 
 	var locked int32

@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func TestMockPrepareCase1(t *testing.T) {
+func TestPrepareFaultyHeightBad(t *testing.T) {
 	H, R, fH := uint64(4), uint64(0), uint64(5)
 
 	sys := makeSystem(4)
@@ -66,7 +66,7 @@ func TestMockPrepareCase1(t *testing.T) {
 	}
 }
 
-func TestMockPrepareCase2(t *testing.T) {
+func TestPrepareFaultyRoundBad(t *testing.T) {
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -120,7 +120,7 @@ func TestMockPrepareCase2(t *testing.T) {
 	}
 }
 
-func TestMockPrepareCase3(t *testing.T) {
+func TestPrepareFaultyQCHeightBad(t *testing.T) {
 	H, R, fH := uint64(4), uint64(0), uint64(4)
 
 	sys := makeSystem(4)
@@ -201,7 +201,7 @@ func TestMockPrepareCase3(t *testing.T) {
 	}
 }
 
-func TestMockPrepareCase4(t *testing.T) {
+func TestPrepareFaultyQCRoundBad(t *testing.T) {
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -282,7 +282,7 @@ func TestMockPrepareCase4(t *testing.T) {
 	}
 }
 
-func TestMockPrepareCase5(t *testing.T) {
+func TestPrepareFaultyQCBlockBad(t *testing.T) {
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -363,7 +363,7 @@ func TestMockPrepareCase5(t *testing.T) {
 	}
 }
 
-func TestMockPrepareCase6(t *testing.T) {
+func TestPrepareFaultyQCSigBad(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), int32(1)
 
 	var locked int32
@@ -454,7 +454,7 @@ func TestMockPrepareCase6(t *testing.T) {
 	}
 }
 
-func TestMockPrepareVoteCase1(t *testing.T) {
+func TestPrepareVoteFaultyHeightOk(t *testing.T) {
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -538,7 +538,7 @@ func TestMockPrepareVoteCase1(t *testing.T) {
 	}
 }
 
-func TestMockPrepareVoteCase2(t *testing.T) {
+func TestPrepareVoteFaultyHeightBad(t *testing.T) {
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), 2
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -623,7 +623,7 @@ func TestMockPrepareVoteCase2(t *testing.T) {
 	}
 }
 
-func TestMockPrepareVoteCase3(t *testing.T) {
+func TestPrepareVoteFaultyRoundOk(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -707,7 +707,7 @@ func TestMockPrepareVoteCase3(t *testing.T) {
 	}
 }
 
-func TestMockPrepareVoteCase4(t *testing.T) {
+func TestPrepareVoteFaultyRoundBad(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), 2
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -779,7 +779,7 @@ func TestMockPrepareVoteCase4(t *testing.T) {
 	}
 }
 
-func TestMockPrepareVoteCase5(t *testing.T) {
+func TestPrepareVoteFaultyPayloadOk(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -851,7 +851,7 @@ func TestMockPrepareVoteCase5(t *testing.T) {
 	}
 }
 
-func TestMockPrepareVoteCase6(t *testing.T) {
+func TestPrepareVoteFaultyPayloadBad(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), 2
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)

@@ -8,7 +8,7 @@ Tests and the mock system were largely adopted from [`polynetwork/Zion`](https:/
 
 Functional tests are located in `mock_*_test.go` files. Faulty behavior is defined by a `hook`, which tampers with validator data right before sending (see `MockPeer.Send()`). Round changes are indicative of whether a faulty behavior was detected or not. Thus, tests pass or fail whether the faulty behavior causes a round change or not.
 
-All tests follow the naming convention `TestMock<MsgType>Case*`.
+All tests follow the naming convention `Test<MsgType><TestType>`.
 
 ## Leader-to-Replica Phase Tests
 

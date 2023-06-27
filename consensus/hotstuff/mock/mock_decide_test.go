@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func TestMockDecideCase1(t *testing.T) {
+func TestDecideFaultyHeightBad(t *testing.T) {
 	H, R, fH := uint64(4), uint64(0), uint64(5)
 
 	sys := makeSystem(4)
@@ -64,7 +64,7 @@ func TestMockDecideCase1(t *testing.T) {
 	}
 }
 
-func TestMockDecideCase2(t *testing.T) {
+func TestDecideFaultyRoundBad(t *testing.T) {
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -117,7 +117,7 @@ func TestMockDecideCase2(t *testing.T) {
 	}
 }
 
-func TestMockDecideCase3(t *testing.T) {
+func TestDecideFaultyDiplomaBlockBad(t *testing.T) {
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -184,7 +184,7 @@ func TestMockDecideCase3(t *testing.T) {
 	}
 }
 
-func TestMockDecideCase4(t *testing.T) {
+func TestDecideFaultyDiplomaQCBlockBad(t *testing.T) {
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
