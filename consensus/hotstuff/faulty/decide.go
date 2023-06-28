@@ -12,8 +12,10 @@ import (
 // handleCommitVote implement description as follow:
 // ```
 // leader wait for (n n f) votes: V ← {v | matchingMsg(v, commit, curView)}
+//
 //	commitQC ← QC(V )
 //	broadcast Msg(decide, ⊥, commitQC )
+//
 // ```
 func (c *Core) handleCommitVote(data *hs.Message) error {
 	var (

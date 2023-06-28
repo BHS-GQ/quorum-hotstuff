@@ -3,7 +3,9 @@ package faulty
 import hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
 // sendNewView, repo send message of new-view, formula as follow:
-// 	MSG(new-view, _, prepareQC)
+//
+//	MSG(new-view, _, prepareQC)
+//
 // the field of view will be packaged in message before broadcast.
 func (c *Core) sendNewView() {
 	logger := c.newLogger()

@@ -39,7 +39,6 @@ func (c *Core) RoundU64() uint64 {
 // `current height + 1` to ensure that the `backlog` memory won't be too large, it won't interrupt the consensus
 // process, because that the `core` instance will sync block until the current height to the correct value.
 //
-//
 // todo(fuk):if the view is equal the current view, compare the Message type and round state, with the right
 // round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
 // state is `future Message`. Message type and round state table as follow:
@@ -76,8 +75,8 @@ func (c *Core) checkMsgDest() error {
 }
 
 // verifyQC
-//  - Check QC fields before checking contained aggsig against contents
-//  - Aggsig checking is done by signer.AuthQC()
+//   - Check QC fields before checking contained aggsig against contents
+//   - Aggsig checking is done by signer.AuthQC()
 func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	if qc == nil || qc.View == nil {
 		return fmt.Errorf("qc or qc.View is nil")
@@ -169,7 +168,7 @@ func buildRoundStartQC(lastBlock *types.Block) (*hs.QuorumCert, error) {
 }
 
 // sendVote
-//  - Entrypoint for sending any kind of vote message to leader
+//   - Entrypoint for sending any kind of vote message to leader
 func (c *Core) sendVote(code hs.MsgType) {
 	logger := c.newLogger()
 
@@ -209,7 +208,7 @@ func (c *Core) checkMsgSource(src common.Address) error {
 }
 
 // checkNode
-//  - Compare received block/node with local block/node
+//   - Compare received block/node with local block/node
 func (c *Core) checkNode(node *hs.ProposedBlock, compare bool) error {
 	if node == nil || node.Parent == hs.EmptyHash ||
 		node.Block == nil || node.Block.Header() == nil {
@@ -234,8 +233,8 @@ func (c *Core) checkNode(node *hs.ProposedBlock, compare bool) error {
 }
 
 // checkBlock
-//  - Ensure that received block/node is consistent with latest chained block
-//  - If locked block exists, make sure it is equal to received block/node
+//   - Ensure that received block/node is consistent with latest chained block
+//   - If locked block exists, make sure it is equal to received block/node
 func (c *Core) checkBlock(block *types.Block) error {
 	lastChainedBlock := c.current.LastChainedBlock()
 	if lastChainedBlock.NumberU64()+1 != block.NumberU64() {
@@ -258,9 +257,9 @@ func (c *Core) checkBlock(block *types.Block) error {
 }
 
 // checkVote
-//  - Check if vote values and bytes are as expected
-//  - Byte equality is a prerequisite for aggregating BLS signatures
-//  - BLS signatures per vote are checked in tbls.Recover() (see signer/signer.go)
+//   - Check if vote values and bytes are as expected
+//   - Byte equality is a prerequisite for aggregating BLS signatures
+//   - BLS signatures per vote are checked in tbls.Recover() (see signer/signer.go)
 func (c *Core) checkVote(vote *hs.Vote, code hs.MsgType) error {
 	if vote == nil {
 		return fmt.Errorf("current vote is nil")

@@ -2,7 +2,7 @@
 
 `hotstuff/mock` was created for functional testing our BHS implementation. It works by imitating a GoQuorum/geth `backend` while retaining the same `core` logic. This module ensures that BHS can at least detect simple Byzantine behaviors w/ tampered fields.
 
-Tests and the mock system were largely adopted from [`polynetwork/Zion`](https://github.com/polynetwork/Zion).
+Tests and the mock system were largely adopted from PolyNetwork's [`Zion`](https://github.com/polynetwork/Zion).
 
 ## Functional Testing
 

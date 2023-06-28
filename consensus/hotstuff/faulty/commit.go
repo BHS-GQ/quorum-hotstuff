@@ -6,9 +6,11 @@ import (
 
 // handlePreCommitVote implement description as follow:
 // ```
-//  leader wait for (n n f) votes: V ← {v | matchingMsg(v, pre-commit, curView)}
-//	precommitQC ← QC(V )
-//	broadcast Msg(commit, ⊥, precommitQC )
+//
+//	 leader wait for (n n f) votes: V ← {v | matchingMsg(v, pre-commit, curView)}
+//		precommitQC ← QC(V )
+//		broadcast Msg(commit, ⊥, precommitQC )
+//
 // ```
 // [NOTE] We follow HotStuff specifications strictly, so whole ProposedBlock is NOT sent
 func (c *Core) handlePreCommitVote(data *hs.Message) error {
@@ -97,8 +99,10 @@ func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 // handleCommit implement description as follow:
 // ```
 // repo wait for message m : matchingQC(m.justify, pre-commit, curView) from leader(curView)
+//
 //	lockedQC ← m.justify
 //	send voteMsg(commit, m.justify.node, ⊥) to leader(curView)
+//
 // ```
 func (c *Core) handleCommit(data *hs.Message) error {
 	var (

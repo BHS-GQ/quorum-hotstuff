@@ -70,7 +70,7 @@ func (s *HotstuffSigner) Address() common.Address {
 */
 
 // BLSSign
-//  - Sign bytes using private BLS key
+//   - Sign bytes using private BLS key
 func (s *HotstuffSigner) BLSSign(data []byte) ([]byte, error) {
 	signed_data, err := tbls.Sign(s.suite, s.blsPrivKey, data)
 	if err != nil {
@@ -80,7 +80,7 @@ func (s *HotstuffSigner) BLSSign(data []byte) ([]byte, error) {
 }
 
 // BLSRecoverAggSig
-//  - Create aggregated BLS signature from vote partial signatures and intended data
+//   - Create aggregated BLS signature from vote partial signatures and intended data
 func (s *HotstuffSigner) BLSRecoverAggSig(data []byte, sigShares [][]byte) ([]byte, error) {
 	aggSig, err := tbls.Recover(s.suite, s.blsPubPoly, data, sigShares, s.t, s.n)
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *HotstuffSigner) BLSRecoverAggSig(data []byte, sigShares [][]byte) ([]by
 }
 
 // BLSVerifyAggSig
-//  - Verify aggregated BLS signature on intended data
+//   - Verify aggregated BLS signature on intended data
 func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 	err := bls.Verify(s.suite, s.blsPubPoly.Commit(), data, aggSig)
 	if err != nil {
@@ -100,8 +100,8 @@ func (s *HotstuffSigner) BLSVerifyAggSig(data []byte, aggSig []byte) error {
 }
 
 // AuthQC
-//  - Authenticates QC signature against contents using BLSVerifyAggSig()
-//  - Must be called after QC fields have been verified
+//   - Authenticates QC signature against contents using BLSVerifyAggSig()
+//   - Must be called after QC fields have been verified
 func (s *HotstuffSigner) AuthQC(qc *hs.QuorumCert) error {
 	// skip genesis block
 	if qc.View.Height.Uint64() == 0 {
@@ -122,9 +122,9 @@ func (s *HotstuffSigner) AuthQC(qc *hs.QuorumCert) error {
 }
 
 // VerifyHeader
-//  - Verifies block header fields and seal
-//  - Note that blocks are sealed by a QC, which needs a call to
-//    AuthQC() for verification
+//   - Verifies block header fields and seal
+//   - Note that blocks are sealed by a QC, which needs a call to
+//     AuthQC() for verification
 func (s *HotstuffSigner) VerifyHeader(header *types.Header, valSet hs.ValidatorSet, seal bool) error {
 	// verifying the genesis block is not supported
 	number := header.Number.Uint64()

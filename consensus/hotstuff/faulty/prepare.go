@@ -74,10 +74,12 @@ func (c *Core) sendPrepare() {
 
 // handlePrepare implement description as follow:
 // ```
-//  repo wait for message m : matchingMsg(m, prepare, curView) from leader(curView)
-//	if m.node extends from m.justify.node ∧
-//	safeNode(m.node, m.justify) then
-//	send voteMsg(prepare, m.node, ⊥) to leader(curView)
+//
+//	 repo wait for message m : matchingMsg(m, prepare, curView) from leader(curView)
+//		if m.node extends from m.justify.node ∧
+//		safeNode(m.node, m.justify) then
+//		send voteMsg(prepare, m.node, ⊥) to leader(curView)
+//
 // ```
 func (c *Core) handlePrepare(data *hs.Message) error {
 	var (

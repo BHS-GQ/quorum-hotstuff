@@ -1,0 +1,60 @@
+{
+    "alloc": {
+        "0x0e97013ea7355bc9fa95c387669e89096bd3fa3a": {
+            "balance": "9999999999999999999999999999"
+        },
+        "0x15700f6b73badb9136304b6015ee4bcf5569c297": {
+            "balance": "9999999999999999999999999999"
+        },
+        "0x804fc6a4192e4781c082a3f8f9297f276c6f02ea": {
+            "balance": "9999999999999999999999999999"
+        },
+        "0x8fd250a1957c953efccf7c699ff5fd07ff0141f8": {
+            "balance": "9999999999999999999999999999"
+        },
+        "0xe1cdbb159ef93814f2ee2d6d25786a8b31f2b770": {
+            "balance": "9999999999999999999999999999"
+        }
+    },
+    "coinbase": "0x0000000000000000000000000000000000000000",
+    "config": {
+        "byzantiumBlock": 0,
+        "chainId": 1337,
+        "constantinopleBlock": 0,
+        "constantinopleFixBlock": 0,
+        "eip150Block": 0,
+        "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+        "eip155Block": 0,
+        "eip158Block": 0,
+        "homesteadBlock": 0,
+        "hotstuff": {
+            "blockperiodseconds": 1,
+            "faultymode": "Disabled",
+            "policy": "RoundRobin",
+            "requesttimeoutmilliseconds": 5000,
+            "validators": [
+                "0x6cf2e5f12d20d4ca6153c309076114a8ce2620fb",
+                "0x13ecd7291bf2e36f0aaee87c5c834e17b98bf720",
+                "0x7e2b90b4ae578fa05c4b79d2ed6189576534839d",
+                "0x05098135744694e6d8735750fed9d83de43c9dba"
+            ]
+        },
+        "isQuorum": true,
+        "maxCodeSizeConfig": [
+            {
+                "block": 0,
+                "size": 128
+            }
+        ],
+        "txnSizeLimit": 128
+    },
+    "difficulty": "0x1",
+    "extraData": "0xf87aa00000000000000000000000000000000000000000000000000000000000000000f854946cf2e5f12d20d4ca6153c309076114a8ce2620fb9405098135744694e6d8735750fed9d83de43c9dba9413ecd7291bf2e36f0aaee87c5c834e17b98bf720947e2b90b4ae578fa05c4b79d2ed6189576534839dc080c0",
+    "gasLimit": "0x1fffffffffffff",
+    "gasUsed": "0x0",
+    "mixHash": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "nonce": "0x0",
+    "number": "0x0",
+    "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "timestamp": "0x58ee40ba"
+}

@@ -39,7 +39,6 @@ func (c *Core) RoundU64() uint64 {
 // `current height + 1` to ensure that the `backlog` memory won't be too large, it won't interrupt the consensus
 // process, because that the `core` instance will sync block until the current height to the correct value.
 //
-//
 // todo(fuk):if the view is equal the current view, compare the Message type and round state, with the right
 // round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
 // state is `future Message`. Message type and round state table as follow:
@@ -76,8 +75,8 @@ func (c *Core) checkMsgDest() error {
 }
 
 // verifyQC
-//  - Check QC fields before checking contained aggsig against contents
-//  - Aggsig checking is done by signer.AuthQC()
+//   - Check QC fields before checking contained aggsig against contents
+//   - Aggsig checking is done by signer.AuthQC()
 func (c *Core) verifyQC(data *hs.Message, qc *hs.QuorumCert) error {
 	if qc == nil || qc.View == nil {
 		return fmt.Errorf("qc or qc.View is nil")

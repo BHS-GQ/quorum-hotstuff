@@ -10,9 +10,9 @@ import (
 )
 
 // sendPrepare
-//  - Leader builds prepare message. Picks proposal from locked block or
-//	  pending request from miner
-//  - We make sure to delay until intended block time before sending
+//   - Leader builds prepare message. Picks proposal from locked block or
+//     pending request from miner
+//   - We make sure to delay until intended block time before sending
 func (c *Core) sendPrepare() {
 
 	// filter incorrect proposer and state
@@ -76,8 +76,8 @@ func (c *Core) sendPrepare() {
 }
 
 // handlePrepare
-//  - Replica waits for prepare message and verifies proposed block
-//  - Verified: accept proposal
+//   - Replica waits for prepare message and verifies proposed block
+//   - Verified: accept proposal
 func (c *Core) handlePrepare(data *hs.Message) error {
 	var (
 		logger  = c.newLogger()

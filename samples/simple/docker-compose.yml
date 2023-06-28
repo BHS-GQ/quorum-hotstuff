@@ -1,0 +1,225 @@
+networks:
+  gq-net:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.16.239.0/24
+      driver: default
+    name: gq-net
+services:
+  nginx:
+    container_name: nginx
+    depends_on:
+      validator0:
+        condition: service_healthy
+      validator1:
+        condition: service_healthy
+      validator2:
+        condition: service_healthy
+      validator3:
+        condition: service_healthy
+    expose:
+    - 8000
+    - 443
+    image: nginx:latest
+    networks:
+      gq-net:
+        ipv4_address: 172.16.239.5
+    ports:
+    - 8080:8000
+    restart: unless-stopped
+    volumes:
+    - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+  validator0:
+    build:
+      context: config/goquorum
+    container_name: validator0
+    deploy:
+      resources:
+        limits:
+          cpus: '2.50'
+          memory: 4G
+        reservations:
+          memory: 4G
+    environment:
+    - GOQUORUM_CONS_ALGO=${GOQUORUM_CONS_ALGO}
+    - BLOCK_PERIOD=${BLOCK_PERIOD}
+    - GOQUORUM_GENESIS_MODE=standard
+    expose:
+    - 30303
+    - 8545
+    - 9545
+    healthcheck:
+      interval: 3s
+      retries: 10
+      start_period: 5s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - --proxy
+      - 'off'
+      - http://localhost:8545
+      timeout: 3s
+    networks:
+      gq-net:
+        ipv4_address: 172.16.239.6
+    ports:
+    - 21001:8545/tcp
+    - 30303
+    - 9545
+    restart: on-failure
+    volumes:
+    - ./config/nodes/validator0:/config/keys
+    - ./logs/quorum:/var/log/quorum/
+    - ./config/permissions:/permissions
+  validator1:
+    build:
+      context: config/goquorum
+    container_name: validator1
+    deploy:
+      resources:
+        limits:
+          cpus: '2.50'
+          memory: 4G
+        reservations:
+          memory: 4G
+    environment:
+    - GOQUORUM_CONS_ALGO=${GOQUORUM_CONS_ALGO}
+    - BLOCK_PERIOD=${BLOCK_PERIOD}
+    - GOQUORUM_GENESIS_MODE=standard
+    expose:
+    - 30303
+    - 8545
+    - 9545
+    healthcheck:
+      interval: 3s
+      retries: 10
+      start_period: 5s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - --proxy
+      - 'off'
+      - http://localhost:8545
+      timeout: 3s
+    networks:
+      gq-net:
+        ipv4_address: 172.16.239.7
+    ports:
+    - 21002:8545/tcp
+    - 30303
+    - 9545
+    restart: on-failure
+    volumes:
+    - ./config/nodes/validator1:/config/keys
+    - ./logs/quorum:/var/log/quorum/
+    - ./config/permissions:/permissions
+  validator2:
+    build:
+      context: config/goquorum
+    container_name: validator2
+    deploy:
+      resources:
+        limits:
+          cpus: '2.50'
+          memory: 4G
+        reservations:
+          memory: 4G
+    environment:
+    - GOQUORUM_CONS_ALGO=${GOQUORUM_CONS_ALGO}
+    - BLOCK_PERIOD=${BLOCK_PERIOD}
+    - GOQUORUM_GENESIS_MODE=standard
+    expose:
+    - 30303
+    - 8545
+    - 9545
+    healthcheck:
+      interval: 3s
+      retries: 10
+      start_period: 5s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - --proxy
+      - 'off'
+      - http://localhost:8545
+      timeout: 3s
+    networks:
+      gq-net:
+        ipv4_address: 172.16.239.8
+    ports:
+    - 21003:8545/tcp
+    - 30303
+    - 9545
+    restart: on-failure
+    volumes:
+    - ./config/nodes/validator2:/config/keys
+    - ./logs/quorum:/var/log/quorum/
+    - ./config/permissions:/permissions
+  validator3:
+    build:
+      context: config/goquorum
+    container_name: validator3
+    deploy:
+      resources:
+        limits:
+          cpus: '2.50'
+          memory: 4G
+        reservations:
+          memory: 4G
+    environment:
+    - GOQUORUM_CONS_ALGO=${GOQUORUM_CONS_ALGO}
+    - BLOCK_PERIOD=${BLOCK_PERIOD}
+    - GOQUORUM_GENESIS_MODE=standard
+    expose:
+    - 30303
+    - 8545
+    - 9545
+    healthcheck:
+      interval: 3s
+      retries: 10
+      start_period: 5s
+      test:
+      - CMD
+      - wget
+      - --spider
+      - --proxy
+      - 'off'
+      - http://localhost:8545
+      timeout: 3s
+    networks:
+      gq-net:
+        ipv4_address: 172.16.239.9
+    ports:
+    - 21004:8545/tcp
+    - 30303
+    - 9545
+    restart: on-failure
+    volumes:
+    - ./config/nodes/validator3:/config/keys
+    - ./logs/quorum:/var/log/quorum/
+    - ./config/permissions:/permissions
+version: '3.6'
+x-quorum-def:
+  build:
+    context: config/goquorum
+  expose:
+  - 30303
+  - 8545
+  - 9545
+  healthcheck:
+    interval: 3s
+    retries: 10
+    start_period: 5s
+    test:
+    - CMD
+    - wget
+    - --spider
+    - --proxy
+    - 'off'
+    - http://localhost:8545
+    timeout: 3s
+  restart: on-failure

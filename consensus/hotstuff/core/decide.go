@@ -9,11 +9,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// handleCommitVote
-// 	- Leader waits for pre-commit votes
-// 	- Quorum: build pre-commitQC and send `Diploma`
-//		- `Diploma` contains commitQC and block hash
-//  - BHS Spec: implements leader portion of DECIDE phase (lines 27-30)
+// handleCommitVote implements the Decide phase's leader portion (see BHS specs)
+//  1. Leader waits for Commit votes
+//  2. Build CommitQC upon reaching quorum
+//  3. Send Diploma containing CommitQC and ProposedBlock block hash
+//  4. Send locked block (wrapped in ProposedBlock) to miner for committing
+//     to local blockchain.
 func (c *Core) handleCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -79,6 +80,7 @@ func (c *Core) handleCommitVote(data *hs.Message) error {
 	return nil
 }
 
+// Builds and broadcasts Diploma to replicas
 func (c *Core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	logger := c.newLogger()
 
@@ -97,10 +99,11 @@ func (c *Core) sendDecide(block common.Hash, commitQC *hs.QuorumCert) {
 	logger.Trace("sendDecide", "msgCode", code, "node", commitQC.ProposedBlock)
 }
 
-// handleDecide
-// 	- Replica waits for decide message and verifies commitQC and block hash
-// 	- Verified: send block to miner for committing to blockchain
-//  - BHS Spec: implements replica portion of DECIDE phase (lines 31-34)
+// handleDecide implements the Decide phase's replica portion (see BHS specs)
+//  1. Replica receives Diploma
+//  2. Verify Diploma
+//  3. Once verified, send locked block (wrapped in ProposedBlock) to miner for committing
+//     to local blockchain.
 func (c *Core) handleDecide(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -182,6 +185,7 @@ func (c *Core) handleDecide(data *hs.Message) error {
 	return nil
 }
 
+// Accept CommitQC and update local state
 func (c *Core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert) error {
 	if err := c.current.SetSealedBlock(sealedBlock); err != nil {
 		return err
@@ -193,6 +197,7 @@ func (c *Core) acceptCommitQC(sealedBlock *types.Block, commitQC *hs.QuorumCert)
 	return nil
 }
 
+// If replica, execute block before sending to miner
 func (c *Core) commit(sealedBlock *types.Block) error {
 	if lockedBlock := c.current.LockedBlock(); lockedBlock == nil {
 		return fmt.Errorf("locked block is nil")

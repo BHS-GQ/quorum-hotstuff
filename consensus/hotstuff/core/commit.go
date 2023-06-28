@@ -4,11 +4,10 @@ import (
 	hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-// handlePreCommitVote
-// 	- Leader waits for pre-commit votes
-// 	- Quorum: build pre-commitQC and send commit message
-// 	- We follow HotStuff specifications strictly, so whole ProposedBlock is NOT sent
-//  - BHS Spec: implements leader portion of COMMIT phase (lines 19-22)
+// handlePreCommitVote implements the Commit phase's leader portion (see BHS specs)
+//  1. Leader waits for PreCommit votes
+//  2. Build LockQC upon reaching quorum
+//  3. Send LockQC to replicas
 func (c *Core) handlePreCommitVote(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -59,6 +58,7 @@ func (c *Core) handlePreCommitVote(data *hs.Message) error {
 	return nil
 }
 
+// Send LockQC to replicas
 func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 	logger := c.newLogger()
 
@@ -72,10 +72,10 @@ func (c *Core) sendCommit(lockQC *hs.QuorumCert) {
 	logger.Trace("sendCommit", "msgCode", code, "node", lockQC.ProposedBlock)
 }
 
-// handleCommit
-// 	- Replica waits for commit message and verifies pre-commitQC
-// 	- Verified: send commit vote
-//  - BHS Spec: implements replica portion of COMMIT phase (lines 23-26)
+// handleCommit implements the Commit phase's replica portion (see BHS specs)
+//  1. Replica receives LockQC
+//  2. Verify LockQC
+//  3. Once LockQC is verified, send Commit vote
 func (c *Core) handleCommit(data *hs.Message) error {
 	var (
 		logger = c.newLogger()
@@ -123,6 +123,7 @@ func (c *Core) handleCommit(data *hs.Message) error {
 	return nil
 }
 
+// Lock on new LockQC and update local state
 func (c *Core) acceptLockQC(qc *hs.QuorumCert) error {
 	if err := c.current.Lock(qc); err != nil {
 		return err

@@ -2,9 +2,9 @@ package core
 
 import hs "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
-// sendNewView
-//	- Replicas get latest prepareQC and send it in new-view message
-//  - BHS Spec: implements nextView interrupt (line 36)
+// sendNewView performs the NextView interrupt (see BHS specs)
+//  1. Replicas send latest PrepareQC to leader as the
+//     NewView message. Note that `c.broadcast` unicasts this message
 func (c *Core) sendNewView() {
 	logger := c.newLogger()
 	code := hs.MsgTypeNewView
@@ -20,11 +20,10 @@ func (c *Core) sendNewView() {
 	logger.Trace("sendNewView", "msgCode", code)
 }
 
-// handleNewView
-// 	- Leader waits for new-view messages
-//  - Quorum: pick `highQC`, the max `prepareQC` by view sequence
-// 	- `hs.stateHighQC` denotes that this node is ready to send block and prepare message
-//  - BHS Spec: implements leader portion of PREPARE phase (lines 2-6)
+// handleCommitVote implements the Prepare phase's leader portion (see BHS specs)
+//  1. Leader waits for NewView messages
+//  2. Build HighQC from received PrepareQCs upon reaching quorum
+//  3. Send PackagedQC containing HighQC and encoded ProposedBlock object
 func (c *Core) handleNewView(data *hs.Message) error {
 	var (
 		logger    = c.newLogger()
@@ -76,7 +75,7 @@ func (c *Core) handleNewView(data *hs.Message) error {
 	return nil
 }
 
-// getHighQC leader find the highest `prepareQC` as highQC by `view` sequence.
+// Find the highest PrepareQC view-wise, return it as the HighQC
 func (c *Core) getHighQC() (*hs.QuorumCert, error) {
 	var highQC *hs.QuorumCert
 	for _, data := range c.current.NewViews() {
