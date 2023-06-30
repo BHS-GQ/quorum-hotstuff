@@ -21,7 +21,7 @@ To use BHS in GQ as a Docker container, run the ff:
 docker build . -t <docker-image-name>
 ```
 
-Run toy, local GoQuorum networks using `samples/simple`. Update `samples/simple/config/goquorum/Dockerfile` to point to `<docker-image-name>`.
+Run a local GoQuorum network using `samples/simple`. Update the Dockerfile (`samples/simple/config/goquorum/Dockerfile`) to use `<docker-image-name>`.
 
 ```Dockerfile
 FROM --platform=linux/amd64 <docker-image-name>
@@ -38,6 +38,8 @@ and destroy it using
 ```bash
 ./remove.sh
 ```
+
+A readily-available Docker image can be found [here](https://hub.docker.com/r/gvlim/quorumbhs).
 
 ### Emulated Network
 
