@@ -43,7 +43,7 @@ A readily-available Docker image can be found [here](https://hub.docker.com/r/gv
 
 ### Emulated Network
 
-For more complex use-cases, please refer to our [emnet]() (emulated network) repository.
+For more complex use-cases, refer to our [emnet](https://github.com/BHS-GQ/emnet) (emulated network) repository.
 
 ## BHS Implementation
 
