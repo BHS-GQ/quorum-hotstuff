@@ -6,9 +6,34 @@ Tests and the mock system were largely adopted from PolyNetwork's [`Zion`](https
 
 ## Functional Testing
 
-Functional tests are located in `mock_*_test.go` files. Faulty behavior is defined by a `hook`, which tampers with validator data right before sending (see `MockPeer.Send()`). Round changes are indicative of whether a faulty behavior was detected or not. Thus, tests pass or fail whether the faulty behavior causes a round change or not.
+Functional tests are located in `mock_*_test.go` files. Faulty behavior is defined by a `hook`, which tampers with validator data right before sending (see `MockPeer.Send()`). Round changes are indicative of whether a faulty behavior was detected or not. Thus, tests pass or fail whether the faulty behavior causes a round change or not. We can know if a round change occurs by checking the current view of all validators:
+
+```Go
+h, r := node.api.CurrentSequence()
+...
+if h == H && r == R+1 {
+    hasViewChange = true
+}
+```
 
 All tests follow the naming convention `Test<MsgType><TestType>`.
+
+### Running Tests
+
+Tests cam be run using the ff command:
+
+```bash
+go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run Test<MsgType><TestType>
+```
+
+Use wildcards to run several tests:
+
+```bash
+# Running all PreCommit tests
+go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestPreCommit*
+```
+
+Disable logging by removing the `-v` flag.
 
 ## Leader-to-Replica Phase Tests
 
