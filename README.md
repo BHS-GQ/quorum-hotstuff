@@ -1,6 +1,6 @@
 # Basic HotStuff in GoQuorum
 
-A fork of GoQuorum 22.7.4 containing an implementation of the [Basic HotStuff](https://arxiv.org/pdf/1803.05069.pdf) (BHS) consensus protocol. Heavily based on the BHS implementation found in PolyNetwork's [Zion](https://github.com/polynetwork/Zion) project.
+A fork of GoQuorum 22.7.4 with an implementation of the [Basic HotStuff](https://arxiv.org/pdf/1803.05069.pdf) (BHS) consensus protocol. Heavily based on the BHS implementation found in PolyNetwork's [Zion](https://github.com/polynetwork/Zion) project.
 
 ## Usage
 ### Executable
